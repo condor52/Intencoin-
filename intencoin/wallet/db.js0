@@ -1,0 +1,64 @@
+const Database = require('better-sqlite3');
+const db = new Database(process.env.DATABASE_FILE || './db.sqlite');
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  name TEXT,
+  password_hash TEXT,
+  account_no TEXT,
+  balance REAL DEFAULT 0,
+  created_at INTEGER
+)`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS wallets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  account_index INTEGER,
+  deposit_address TEXT,
+  created_at INTEGER
+)`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS transactions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  type TEXT,
+  amount REAL,
+  balance_after REAL,
+  note TEXT,
+  created_at INTEGER
+)`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT,
+  amount REAL,
+  external_address TEXT,
+  status TEXT,
+  tx_hash TEXT,
+  created_at INTEGER,
+  completed_at INTEGER
+)`).run();
+
+db.prepare(`
+CREATE TABLE IF NOT EXISTS chain_addresses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  chain TEXT,
+  account_index INTEGER,
+  address TEXT,
+  created_at INTEGER
+)`).run();
+
+module.exports = db;
+
+
+---
+
+
+
+0

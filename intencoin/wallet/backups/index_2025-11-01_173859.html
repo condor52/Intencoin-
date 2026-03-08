@@ -1,0 +1,320 @@
+cd ~/intencoin/wallet
+
+# Backup por si acaso
+mkdir -p backups
+cp -f static/index.html "backups/index_$(date +%F_%H%M%S).html" 2>/dev/null || true
+
+# Asegura carpeta static y logo placeholder
+mkdir -p static
+printf '\x89PNG\r\n\x1a\n' > static/logo.png
+
+# Escribe el HTML COMPLETO (PEGA TODO el bloque hasta la ÚLTIMA línea HTML)
+cat > static/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INTENCOIN CRYPTOCURRENCY</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#0f1220;--panel:#151a38;--border:#232a61;--accent:#2f3560;--muted:#9aa0d0}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:#fff}
+  header{display:flex;gap:16px;align-items:center;padding:16px 20px;background:#141834;border-bottom:1px solid #222757}
+  .logo{width:64px;height:64px;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0e1130}
+  .logo img{width:100%;height:100%;object-fit:cover}
+  main{max-width:1000px;margin:20px auto;padding:0 16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin:12px 0}
+  input,button,select{padding:10px;border-radius:10px;border:1px solid #2a3369;background:#0f1330;color:#eaf0ff}
+  input,select{min-width:220px}
+  button{cursor:pointer}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted)}
+  .hidden{display:none}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr}}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="/static/logo.png" alt="LOGO"></div>
+  <div>
+    <div style="font-size:20px;font-weight:700">INTENCOIN CRYPTOCURRENCY</div>
+    <div class="muted">Wallet & API portal</div>
+  </div>
+</header>
+
+<main>
+  <!-- Auth (Register / Login) -->
+  <div class="card" id="auth_card">
+    <h3>Register</h3>
+    <div class="row">
+      <input id="r_name" placeholder="Name (optional)">
+      <input id="r_email" placeholder="Email">
+      <input id="r_pass" type="password" placeholder="Password">
+      <button id="btn_register">Create</button>
+    </div>
+    <div id="r_out" class="muted mono"></div>
+
+    <h3 style="margin-top:16px">Login</h3>
+    <div class="row">
+      <input id="l_email" placeholder="Email">
+      <input id="l_pass" type="password" placeholder="Password">
+      <button id="btn_login">Sign in</button>
+    </div>
+    <div id="l_out" class="muted mono"></div>
+  </div>
+
+  <!-- DASHBOARD (visible solo con token) -->
+  <div id="dash" class="hidden">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Dashboard</h3>
+        <button id="btn_logout" title="Clear token and go back to login">Logout</button>
+      </div>
+      <div class="muted">Authenticated session is active.</div>
+    </div>
+
+    <!-- Account -->
+    <div class="card">
+      <h3>Account</h3>
+      <div class="grid2">
+        <div>
+          <div class="row">
+            <button id="btn_balance">Balance</button>
+            <span id="bal" class="muted mono"></span>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="btn_create_wallet">Create Wallet / Address</button>
+            <button id="btn_show_address" title="Show last created address">Show My Address</button>
+            <span id="addr" class="muted mono"></span>
+          </div>
+        </div>
+
+        <div>
+          <div class="row">
+            <input id="to_email" placeholder="Send to (email)">
+            <input id="amt" placeholder="Amount">
+            <button id="btn_send">Transfer</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <input id="ext" placeholder="External address">
+            <input id="wamt" placeholder="Amount">
+            <button id="btn_withdraw">Withdraw</button>
+          </div>
+        </div>
+      </div>
+      <div id="a_out" class="muted mono" style="margin-top:6px"></div>
+    </div>
+
+    <!-- Currency Conversion -->
+    <div class="card">
+      <h3>Currency Conversion</h3>
+      <div class="row">
+        <label for="py_base" class="muted">Python API (8083):</label>
+        <input id="py_base" placeholder="http://127.0.0.1:8083" value="http://127.0.0.1:8083">
+        <button id="btn_save_py">Save</button>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <input id="conv_amount" placeholder="Amount (default: full INTEN balance)">
+        <button id="btn_use_full">Use full balance</button>
+        <select id="swap_to" title="Target currency">
+          <option value="BTC">BTC</option>
+          <option value="ETH">ETH</option>
+          <option value="DOGE">DOGE</option>
+          <option value="XLM">XLM</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="DGD">DGD</option>
+          <option value="DEN">DEN</option>
+          <option value="AMR">AMR</option>
+        </select>
+        <button id="btn_convert">Convert</button>
+      </div>
+
+      <div class="muted" style="margin-top:8px">
+        Conversion uses Python service pricing for INTEN when available (/convert or /price).
+        This is a view/convert helper; real on-chain swap endpoint in Node can be added later.
+      </div>
+      <div id="conv_out" class="muted mono" style="margin-top:6px"></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="card">
+      <h3>Transactions</h3>
+      <div class="row">
+        <button id="btn_txs">Refresh</button>
+      </div>
+      <pre id="txs" class="mono" style="white-space:pre-wrap;font-size:13px;margin-top:8px"></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+let TOKEN = null;
+
+// Helpers
+function setToken(t){ TOKEN = t; localStorage.setItem('token', t||''); renderAuth(); }
+function currentToken(){ return TOKEN || localStorage.getItem('token') || ''; }
+function renderAuth(){
+  const has = !!currentToken();
+  document.getElementById('auth_card').classList.toggle('hidden', has);
+  document.getElementById('dash').classList.toggle('hidden', !has);
+}
+function showOut(id, obj){ document.getElementById(id).innerText = typeof obj==='string' ? obj : JSON.stringify(obj,null,2); }
+
+// API wrapper
+async function api(p, m="GET", b=null){
+  const h = {"Content-Type":"application/json"};
+  const t = currentToken(); if(t) h["Authorization"] = "Bearer " + t;
+  const r = await fetch(p,{method:m,headers:h,body:b?JSON.stringify(b):null});
+  const txt = await r.text();
+  try{ return JSON.parse(txt); }catch{ return { raw: txt, status: r.status } }
+}
+
+// Auth
+async function register(){
+  const out = await api('/auth/register','POST',{
+    name: document.getElementById('r_name').value,
+    email: document.getElementById('r_email').value,
+    password: document.getElementById('r_pass').value
+  });
+  showOut('r_out', out);
+  if(out.token){ setToken(out.token); }
+}
+async function login(){
+  const out = await api('/auth/login','POST',{
+    email: document.getElementById('l_email').value,
+    password: document.getElementById('l_pass').value
+  });
+  showOut('l_out', out);
+  if(out.token){ setToken(out.token); }
+}
+function logout(){ setToken(''); }
+
+// Account
+async function balance(){
+  const out = await api('/api/balance');
+  showOut('bal', out);
+}
+async function createWallet(){
+  const out = await api('/api/wallet/create','POST',{});
+  showOut('addr', out);
+  if(out && out.address){ localStorage.setItem('my_address', out.address); }
+}
+function showMyAddress(){
+  const a = localStorage.getItem('my_address') || '(no address yet; use "Create Wallet")';
+  document.getElementById('addr').innerText = a;
+}
+async function transfer(){
+  const out = await api('/api/transfer','POST',{
+    toEmail: document.getElementById('to_email').value,
+    amount: parseFloat(document.getElementById('amt').value||'0')
+  });
+  showOut('a_out', out);
+}
+async function withdraw(){
+  const out = await api('/api/withdraw-request','POST',{
+    external_address: document.getElementById('ext').value,
+    amount: parseFloat(document.getElementById('wamt').value||'0')
+  });
+  showOut('a_out', out);
+}
+async function loadTxs(){
+  const out = await api('/api/transactions');
+  showOut('txs', out);
+}
+
+// Conversion
+const DEFAULT_PY_BASE = 'http://127.0.0.1:8083';
+function pyBase(){ return (localStorage.getItem('py_base') || DEFAULT_PY_BASE).replace(/\/+$/,''); }
+function savePyBase(){
+  const v = document.getElementById('py_base').value.trim();
+  if(v) localStorage.setItem('py_base', v);
+  document.getElementById('conv_out').innerText = 'Saved: ' + pyBase();
+}
+function hydratePyBaseInput(){
+  const el = document.getElementById('py_base');
+  if(el) el.value = pyBase();
+}
+async function useFullBalance(){
+  const b = await api('/api/balance');
+  const intenBal = Number((b && b.balance) || 0);
+  document.getElementById('conv_amount').value = intenBal > 0 ? intenBal : '';
+  document.getElementById('conv_out').innerText = 'Amount set to full balance: ' + intenBal;
+}
+async function convertFromWallet(){
+  const toSym = (document.getElementById('swap_to').value||'').trim().toUpperCase();
+  try{
+    const b = await api('/api/balance');
+    const intenBal = Number((b && b.balance) || 0);
+    const manual = parseFloat((document.getElementById('conv_amount').value||'').trim());
+    const amount = Number.isFinite(manual) && manual>0 ? manual : intenBal;
+    if(!Number.isFinite(amount) || amount<=0){
+      document.getElementById('conv_out').innerText = 'No balance or invalid amount.';
+      return;
+    }
+    // /convert preferido
+    let r = await fetch(pyBase() + '/convert', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ from:'INTEN', to:toSym, amount })
+    });
+    if(r.ok){
+      const j = await r.json().catch(()=>null);
+      if(j && (j.amount_converted!=null || j.result!=null || j.rate!=null)){
+        const rate = j.rate ?? (j.result ? j.result/amount : null);
+        const outAmount = j.amount_converted ?? j.result ?? NaN;
+        document.getElementById('conv_out').innerText = `Converted ${amount} INTEN → ${toSym}: ${outAmount} (rate=${rate ?? 'n/a'})`;
+        return;
+      }
+    }
+    // fallback /price
+    r = await fetch(pyBase() + `/price?from=INTEN&to=${encodeURIComponent(toSym)}&amount=${encodeURIComponent(amount)}`);
+    if(r.ok){
+      const j = await r.json().catch(()=>null);
+      if(j && (j.amount_converted!=null || j.result!=null || j.rate!=null)){
+        const rate = j.rate ?? (j.result ? j.result/amount : null);
+        const outAmount = j.amount_converted ?? j.result ?? NaN;
+        document.getElementById('conv_out').innerText = `Converted ${amount} INTEN → ${toSym}: ${outAmount} (rate=${rate ?? 'n/a'})`;
+        return;
+      }
+    }
+    document.getElementById('conv_out').innerText = 'Conversion API not available (Python 8083).';
+  }catch(e){
+    document.getElementById('conv_out').innerText = 'Error: ' + String(e);
+  }
+}
+
+// Wire up
+document.getElementById('btn_register').onclick = register;
+document.getElementById('btn_login').onclick = login;
+document.getElementById('btn_logout').onclick = logout;
+
+document.getElementById('btn_balance').onclick = balance;
+document.getElementById('btn_create_wallet').onclick = createWallet;
+document.getElementById('btn_show_address').onclick = showMyAddress;
+document.getElementById('btn_send').onclick = transfer;
+document.getElementById('btn_withdraw').onclick = withdraw;
+document.getElementById('btn_txs').onclick = loadTxs;
+
+document.getElementById('btn_save_py').onclick = savePyBase;
+document.getElementById('btn_use_full').onclick = useFullBalance;
+document.getElementById('btn_convert').onclick = convertFromWallet;
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  hydratePyBaseInput();
+  renderAuth();
+});
+</script>
+</body>
+</html>
+HTML
+
+
+
+
+
+0
+

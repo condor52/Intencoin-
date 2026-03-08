@@ -1,0 +1,520 @@
+// INTENCOIN Wallet (JSON-store only) — Minimal server for public deposit & balance by address
+// NO SQLite, NO bcrypt, NO native modules. Safe for Termux/Android.
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
+const { randomUUID } = require('crypto');
+
+const app = express();
+app.use(bodyParser.json());
+
+// --- Config ---
+const PORT = process.env.PORT || 3000;
+// Puedes usar DEPOSIT_SHARED_SECRET o DEPOSIT_SECRET
+const DEPOSIT_SECRET =
+  process.env.DEPOSIT_SHARED_SECRET ||
+  process.env.DEPOSIT_SECRET ||
+  'letmein';
+
+// --- Rutas a archivos JSON ---
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_JSON = path.join(DATA_DIR, 'users.json');          // { [userId]: { id, email, account_no, deposit_address, balance, created_at } }
+const ADDRS_JSON = path.join(DATA_DIR, 'addresses.json');      // { [address]: userId }
+const TXS_JSON   = path.join(DATA_DIR, 'transactions.json');   // [ { id, user_id, type, amount, balance_after, note, created_at } ]
+
+// --- Helpers JSON ---
+// Crea archivos y estructura base si no existen
+function ensureDataFiles() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(USERS_JSON)) fs.writeFileSync(USERS_JSON, JSON.stringify({}, null, 2));
+  if (!fs.existsSync(ADDRS_JSON)) fs.writeFileSync(ADDRS_JSON, JSON.stringify({}, null, 2));
+  if (!fs.existsSync(TXS_JSON))   fs.writeFileSync(TXS_JSON,   JSON.stringify([],  null, 2));
+}
+
+function readJSON(p) {
+  try {
+    const txt = fs.readFileSync(p, 'utf8');
+    if (!txt.trim()) return p.endsWith('.json') ? (p === TXS_JSON ? [] : {}) : {};
+    return JSON.parse(txt);
+  } catch (e) {
+    // Si hay error (corrupción), devuelve estructura vacía segura
+    return (p === TXS_JSON) ? [] : {};
+  }
+}
+
+function writeJSON(p, obj) {
+  // Write-atomic para evitar corrupción en Android
+  const tmp = p + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2));
+  fs.renameSync(tmp, p);
+}
+
+// --- Inicio: asegurar data ---
+ensureDataFiles();
+
+// --- Salud ---
+app.get('/health', (req, res) => {
+  return res.json({ ok: true, port: PORT, deposit_secret_set: DEPOSIT_SECRET ? true : false });
+});
+
+// --- PUBLIC: balance por address (sin token) ---
+// GET /public/balance?address=1ABC...
+app.get('/public/balance', (req, res) => {
+  try {
+    const address = (req.query.address || '').trim();
+    if (!address) {
+      return res.status(400).json({ error: 'address missing' });
+    }
+
+    const users = readJSON(USERS_JSON);
+    const amap  = readJSON(ADDRS_JSON);
+
+    const uid = amap[address];
+    if (!uid || !users[uid]) {
+      return res.status(404).json({ error: 'address not found' });
+    }
+
+    const u = users[uid];
+    const bal = Number(u.balance || 0);
+    return res.json({ address, account_no: u.account_no || uid, balance: bal });
+  } catch (e) {
+    console.error('public/balance error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// --- PUBLIC: depositar por address (webhook puente) ---
+// POST /public/deposit  (headers: x-deposit-secret: <secret>)
+// body: { address, amount, note }
+app.post('/public/deposit', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    if (secretHeader !== DEPOSIT_SECRET) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+
+    const { address, amount, note } = req.body || {};
+    if (!address || !amount || Number(amount) <= 0) {
+      return res.status(400).json({ error: 'params' });
+    }
+
+    const users = readJSON(USERS_JSON);
+    const amap  = readJSON(ADDRS_JSON);
+    const txs   = readJSON(TXS_JSON);
+
+    const uid = amap[address];
+    if (!uid || !users[uid]) {
+      return res.status(404).json({ error: 'address not found' });
+    }
+
+    // Actualiza balance
+    const u = users[uid];
+    const prev = Number(u.balance || 0);
+    const next = +(prev + Number(amount)).toFixed(6);
+    u.balance = next;
+
+    // Guarda user actualizado
+    users[uid] = u;
+    writeJSON(USERS_JSON, users);
+
+    // Inserta tx
+    const tx = {
+      id: randomUUID(),
+      user_id: uid,
+      type: 'deposit',
+      amount: Number(amount),
+      balance_after: next,
+      note: note || 'public deposit',
+      created_at: Date.now()
+    };
+    txs.push(tx);
+    writeJSON(TXS_JSON, txs);
+
+    return res.json({ ok: true, address, balance: next, tx_id: tx.id });
+  } catch (e) {
+    console.error('public/deposit error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// --- (Opcional) PUBLIC: registrar o actualizar mapping address → user ---
+// Útil cuando tu front genera addresses nuevas y quieres asociarlas a un user existente.
+app.post('/public/register_address', (req, res) => {
+  try {
+    // Protegido por el mismo secreto del webhook para evitar abuso
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    if (secretHeader !== DEPOSIT_SECRET) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+
+    const { user_id, account_no, address, email } = req.body || {};
+    if (!user_id || !address) {
+      return res.status(400).json({ error: 'params' });
+    }
+
+    const users = readJSON(USERS_JSON);
+    const amap  = readJSON(ADDRS_JSON);
+
+    // Si el user no existe, lo creamos mínimo viable
+    if (!users[user_id]) {
+      users[user_id] = {
+        id: user_id,
+        email: email || '',
+        account_no: account_no || user_id,
+        deposit_address: address,
+        balance: Number(users[user_id]?.balance || 0) || 0,
+        created_at: Date.now()
+      };
+    } else {
+      users[user_id].deposit_address = address;
+      if (account_no) users[user_id].account_no = account_no;
+      if (email) users[user_id].email = email;
+    }
+
+    // Actualiza mapping
+    amap[address] = user_id;
+
+    writeJSON(USERS_JSON, users);
+    writeJSON(ADDRS_JSON, amap);
+
+    return res.json({ ok: true, user_id, address });
+  } catch (e) {
+    console.error('public/register_address error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// --- Arranque ---
+app.listen(PORT, () => {
+  console.log('INTENCOIN wallet (JSON) running on', PORT);
+  console.log('DEPOSIT_SECRET set?', !!DEPOSIT_SECRET);
+});
+
+
+
+// -------- RUTAS PÚBLICAS ADICIONALES PARA PRODUCCIÓN --------
+// Requiere: asegúrate que solo tengas estas declaraciones una vez en el archivo:
+// const fs = require('fs');
+// const path = require('path');
+// const { randomUUID } = require('crypto');
+
+// 1) registrar address -> user
+app.post('/public/register_address', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { user_id, email, account_no, address } = req.body || {};
+    if (!address || (!user_id && !email && !account_no)) return res.status(400).json({ error: 'params' });
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    if (!fs.existsSync(usersPath)) return res.status(500).json({ error: 'store not ready' });
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    let uid = user_id || null;
+
+    if (!uid && email) {
+      const e = (email || '').toLowerCase();
+      for (const k of Object.keys(users)) {
+        if ((users[k]?.email || '').toLowerCase() === e) { uid = k; break; }
+      }
+    }
+    if (!uid && account_no) {
+      for (const k of Object.keys(users)) {
+        if ((users[k]?.account_no || '') === account_no) { uid = k; break; }
+      }
+    }
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'user not found' });
+
+    users[uid].deposit_address = address;
+    if (typeof users[uid].balance !== 'number') users[uid].balance = 0;
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+    let amap = {}; try { if (fs.existsSync(addrsPath)) amap = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}'); } catch {}
+    amap[address] = uid;
+    fs.writeFileSync(addrsPath, JSON.stringify(amap, null, 2));
+
+    return res.json({ ok: true, user_id: uid, address, account_no: users[uid].account_no, balance: users[uid].balance });
+  } catch (e) {
+    console.error('public/register_address error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// 2) consulta de balance por address (público)
+app.get('/public/balance', (req, res) => {
+  try {
+    const address = (req.query.address || '').toString().trim();
+    if (!address) return res.status(400).json({ error: 'address missing' });
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    if (!fs.existsSync(usersPath) || !fs.existsSync(addrsPath)) return res.status(500).json({ error: 'store not ready' });
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}');
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const u = users[uid];
+    const bal = Number(u.balance || 0);
+    return res.json({ address, account_no: u.account_no || uid, balance: bal });
+  } catch (e) {
+    console.error('public/balance error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// 3) deposit webhook (puente entrante desde Python/servicio externo)
+app.post('/public/deposit', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { address, amount, note } = req.body || {};
+    if (!address || !amount || Number(amount) <= 0) return res.status(400).json({ error: 'params' });
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    if (!fs.existsSync(usersPath) || !fs.existsSync(addrsPath)) return res.status(500).json({ error: 'store not ready' });
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}');
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const u = users[uid];
+    const newBalance = Number(u.balance || 0) + Number(amount);
+    u.balance = newBalance;
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+    const txPath = path.join(__dirname, 'data', 'transactions.json');
+    let txs = []; try { if (fs.existsSync(txPath)) txs = JSON.parse(fs.readFileSync(txPath, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+console.log('[WITHDRAW] node->py START', {to, amount:a});
+    txs.push({ id, user_id: uid, type: 'deposit', amount: Number(amount), balance_after: newBalance, note: note || 'deposit', created_at: now });
+    fs.writeFileSync(txPath, JSON.stringify(txs, null, 2));
+
+    return res.json({ ok: true, address, balance: newBalance, tx_id: id });
+  } catch (e) {
+    console.error('public/deposit error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// 4) withdraw / salida (puente saliente -> genera registro y descuenta balance)
+app.post('/public/withdraw', async (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { address, amount, to, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!address || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    if (!fs.existsSync(usersPath) || !fs.existsSync(addrsPath)) return res.status(500).json({ error: 'store not ready' });
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}');
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const u = users[uid];
+    const bal = Number(u.balance || 0);
+    if (bal < a) return res.status(400).json({ error: 'insufficient' });
+
+    const newBal = +(bal - a).toFixed(6);
+    u.balance = newBal;
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+    const txPath = path.join(__dirname, 'data', 'transactions.json');
+    let txs = []; try { if (fs.existsSync(txPath)) txs = JSON.parse(fs.readFileSync(txPath, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+console.log('[WITHDRAW] node->py START', {to, amount:a});
+    txs.push({ id, user_id: uid, type: 'withdraw', amount: -a, balance_after: newBal, note: `to ${to||'external'}${note ? ' - '+note : ''}`, created_at: now });
+try {        await fetch(PYTHON_RECEIVE_URL, {          method: 'POST',          headers: { 'Content-Type': 'application/json' },          body: JSON.stringify({ address: to, amount: a, note: note || 'from Node' })        });      } catch (e) {        console.error('forward to Python failed:', e);      }
+    fs.writeFileSync(txPath, JSON.stringify(txs, null, 2));
+
+    return res.json({ ok: true, address, balance: newBal, tx_id: id });
+  } catch (e) {
+    console.error('public/withdraw error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// 5) transfer between addresses (por address)
+app.post('/public/transfer_address', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { fromAddress, toAddress, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!fromAddress || !toAddress || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    if (!fs.existsSync(usersPath) || !fs.existsSync(addrsPath)) return res.status(500).json({ error: 'store not ready' });
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}');
+
+    const fromUid = amap[fromAddress], toUid = amap[toAddress];
+    if (!fromUid || !users[fromUid] || !toUid || !users[toUid]) return res.status(404).json({ error: 'address not found' });
+
+    const fromU = users[fromUid], toU = users[toUid];
+    const fromBal = Number(fromU.balance || 0);
+    if (fromBal < a) return res.status(400).json({ error: 'insufficient' });
+
+    const newFrom = +(fromBal - a).toFixed(6);
+    const newTo   = +((Number(toU.balance || 0) + a)).toFixed(6);
+    fromU.balance = newFrom; toU.balance = newTo;
+
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+
+    const txPath = path.join(__dirname, 'data', 'transactions.json');
+    let txs = []; try { if (fs.existsSync(txPath)) txs = JSON.parse(fs.readFileSync(txPath, 'utf8') || '[]'); } catch {}
+    const now = Date.now();
+    txs.push({ id: randomUUID(), user_id: fromUid, type: 'transfer_out', amount: -a, balance_after: newFrom, note: `to ${toAddress}${note ? ' - '+note : ''}`, created_at: now });
+    txs.push({ id: randomUUID(), user_id: toUid,   type: 'transfer_in',  amount:  a, balance_after: newTo,  note: `from ${fromAddress}${note ? ' - '+note : ''}`, created_at: now });
+    fs.writeFileSync(txPath, JSON.stringify(txs, null, 2));
+
+    return res.json({ ok: true, from: { address: fromAddress, balance: newFrom }, to: { address: toAddress, balance: newTo } });
+  } catch (e) {
+    console.error('public/transfer_address error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+
+
+
+
+
+
+0
+
+
+// Ruta para retirar y reenviar al Python
+app.post('/public/withdraw', async (req, res) => {
+  // ... (aquí va el código que te pasé antes) ...
+});
+
+
+// Ruta para retirar y reenviar al Python
+app.post('/public/withdraw', async (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const SHARED = process.env.DEPOSIT_SHARED_SECRET || 'letmein';
+    if (secretHeader !== SHARED) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const { randomUUID } = require('crypto');
+
+    const { address, amount, to_address, note } = req.body || {};
+    const amt = Number(amount || 0);
+    if (!address || !to_address || !(amt > 0)) {
+      return res.status(400).json({ error: 'params' });
+    }
+
+    const usersPath = path.join(__dirname, 'data', 'users.json');
+    const addrsPath = path.join(__dirname, 'data', 'addresses.json');
+    const txsPath = path.join(__dirname, 'data', 'transactions.json');
+
+    if (!fs.existsSync(usersPath) || !fs.existsSync(addrsPath)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8') || '{}');
+    const amap = JSON.parse(fs.readFileSync(addrsPath, 'utf8') || '{}');
+    const txs = fs.existsSync(txsPath)
+      ? JSON.parse(fs.readFileSync(txsPath, 'utf8') || '[]')
+      : [];
+
+    const uid = amap[address];
+    if (!uid || !users[uid]) {
+      return res.status(404).json({ error: 'address not found' });
+    }
+
+    const u = users[uid];
+    const bal = Number(u.balance || 0);
+    if (bal < amt) {
+      return res.status(400).json({ error: 'insufficient' });
+    }
+
+    const newBal = +(bal - amt).toFixed(6);
+    u.balance = newBal;
+
+    txs.push({
+      id: randomUUID(),
+      type: 'withdraw',
+      from_address: address,
+      to_address,
+      amount: amt,
+      note: note || 'withdraw to external',
+      created_at: Date.now()
+    });
+
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+    fs.writeFileSync(txsPath, JSON.stringify(txs, null, 2));
+
+    const PY_WEBHOOK = process.env.PYTHON_RECEIVE_URL || 'http://127.0.0.1:8083/public_receive';
+    try {
+      const r = await fetch(PY_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: to_address,
+          amount: amt,
+          note: note || `from Node ${address}`
+        })
+      });
+      if (!r.ok) {
+        const detail = await r.text();
+        console.error('Python webhook error:', detail);
+        return res.json({
+          ok: true,
+          debited: true,
+          address,
+          balance: newBal,
+          forwarded: false,
+          python_error: detail
+        });
+      }
+    } catch (e) {
+      console.error('Python webhook call failed:', e);
+      return res.json({
+        ok: true,
+        debited: true,
+        address,
+        balance: newBal,
+        forwarded: false,
+        python_error: String(e)
+      });
+    }
+
+    return res.json({
+      ok: true,
+      debited: true,
+      address,
+      balance: newBal,
+      forwarded: true
+    });
+  } catch (e) {
+    console.error('public/withdraw error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+

@@ -1,0 +1,528 @@
+{
+  "users": {
+    "a939ac6c-997a-4312-b5d4-69b888a40cc2": {
+      "uid": "a939ac6c-997a-4312-b5d4-69b888a40cc2",
+      "email": "skyynet38@gmail.com",
+      "pwd": "pbkdf2:sha256:260000$B1FutW6vgsPfItFS$326f32b735cc8ea1a750cc4595bc3eaad458cde36a791403e7f199f915fe36db",
+      "created": 1762998342.0716784
+    },
+    "f2b7c585-6146-4573-9172-e61cd85a8ce0": {
+      "uid": "f2b7c585-6146-4573-9172-e61cd85a8ce0",
+      "email": "goviukac@gmail.com",
+      "pwd": "pbkdf2:sha256:260000$jaGliqI4gt7ISPG5$ea55fe4c58f6b7101d5d3719f16ad93ea0cdca74ac4a63d5ff89e0515f3a10b5",
+      "created": 1763069087.942258
+    },
+    "57b87763-84de-40c0-a2de-d72026374b9b": {
+      "uid": "57b87763-84de-40c0-a2de-d72026374b9b",
+      "email": "btc@btc.com",
+      "pwd": "pbkdf2:sha256:260000$33HhlGIljy9lSf0k$a2ae2fd754f92b72afa8cd1dcf6c199283f885c317089952444507f06a620ed5",
+      "created": 1763849532.8243706
+    },
+    "a22dd7d8-766d-421a-a1ab-6509640a94ca": {
+      "uid": "a22dd7d8-766d-421a-a1ab-6509640a94ca",
+      "email": "ssss@gmail.com",
+      "pwd": "pbkdf2:sha256:260000$zl0WUPqMZTTlvZ4a$e28045804082eac7ace8910534241e8d751268c3840805af2b975432296b0160",
+      "created": 1764034852.123783
+    },
+    "8d4904da-07bf-4736-a95e-d06ea74f2be5": {
+      "uid": "8d4904da-07bf-4736-a95e-d06ea74f2be5",
+      "email": "dani@gmail.com",
+      "pwd": "pbkdf2:sha256:260000$qHv2HpmVcgyMYv9B$a5f37ae2e29881d26b48eaf7b9822d4387505d77f78b755f5747526997b60808",
+      "created": 1764267492.3168957
+    },
+    "c829ad52-0b7d-4cf1-a7b0-d8f724fac8c2": {
+      "uid": "c829ad52-0b7d-4cf1-a7b0-d8f724fac8c2",
+      "email": "rrr@outlook.com",
+      "pwd": "pbkdf2:sha256:260000$gWXExCSuiQ4XJ1KO$49f895a7226ef01110a4584a4d30315ab3ba7354d69665ee9adc947eacb59703",
+      "created": 1764268331.8853154
+    },
+    "f38b9e91-3e50-42f8-92c4-bcec0d03fb71": {
+      "uid": "f38b9e91-3e50-42f8-92c4-bcec0d03fb71",
+      "email": "ffff@yahoo.com",
+      "pwd": "pbkdf2:sha256:260000$1MAmsk8CtaNRqJTx$590f6029ef797bd33098ef39a164165b66774955f404c90a7e7e0e21fb876386",
+      "created": 1764358331.1832275
+    },
+    "63a92277-4934-456d-931a-4b54bea70449": {
+      "uid": "63a92277-4934-456d-931a-4b54bea70449",
+      "email": "dddd@dddd",
+      "pwd": "pbkdf2:sha256:260000$6LdlfqdFVEOXWBf8$c826f99b5a2c42c08a80a8b7a44353aaa6833ba8e34b823e8b1a93be663bb086",
+      "created": 1764628126.8573344
+    },
+    "cc153ce1-b3de-4348-818c-a176ac86ce45": {
+      "uid": "cc153ce1-b3de-4348-818c-a176ac86ce45",
+      "email": "aaaa",
+      "pwd": "pbkdf2:sha256:260000$pFDO6keBikymmFJd$8466096a3a94e261cc6e554978ee5b22efeced912767827e6db3663a75dc22aa",
+      "created": 1764698237.290628
+    },
+    "4eaedfee-d572-4b92-8672-18e4db68ad8b": {
+      "uid": "4eaedfee-d572-4b92-8672-18e4db68ad8b",
+      "email": "f",
+      "pwd": "pbkdf2:sha256:260000$x9anCTi9OUpXrONf$07e904e698f482312fc43c86583a052b25858d7ec8f45f2f07e1b01fc62e51b7",
+      "created": 1764703682.7620854
+    },
+    "21a937d3-f717-4eba-a4a9-49ee8a060e29": {
+      "uid": "21a937d3-f717-4eba-a4a9-49ee8a060e29",
+      "email": "a",
+      "pwd": "pbkdf2:sha256:260000$COmSTI1DtQd92EHP$4232cbf93a0d46211de9721b92eb822eee3f4ae802d3f2eae235e88188d29c20",
+      "created": 1764703761.9093194
+    },
+    "54b1e379-9cca-491c-8224-d49c220fa245": {
+      "uid": "54b1e379-9cca-491c-8224-d49c220fa245",
+      "email": "test_user@chat.com",
+      "pwd": "pbkdf2:sha256:260000$wMoAM2jm5aAehQKY$823c69d35a6d47bb0a484fdb8af71874b559641b666b1a72baeca9638c544888",
+      "created": 1764705040.8209016
+    },
+    "012c4904-11a5-49ff-908c-48b04a0ea540": {
+      "uid": "012c4904-11a5-49ff-908c-48b04a0ea540",
+      "email": "test-final@chat.com",
+      "pwd": "pbkdf2:sha256:260000$YO0lZ8HvdCcCbudy$11380c129e7242310b414729b1080900b0a17aa993630fcef00dbf9dd5384119",
+      "created": 1764705279.3395963
+    },
+    "8238d975-8c7b-4237-a188-44c866f82eb7": {
+      "uid": "8238d975-8c7b-4237-a188-44c866f82eb7",
+      "email": "btest",
+      "pwd": "scrypt:32768:8:1$qLCEkR9ZUh37LKPo$fcbd46875f9c323740c3a2ff788400e48299a01089d185a2a3e734c711349e54177ed7603680a13adf7ff6f90295fb380ea4971911d718505c9286a9c750728b",
+      "created": 1770081236.1303866
+    }
+  },
+  "accounts": {
+    "WAL-A939AC6C": {
+      "account_id": "WAL-A939AC6C",
+      "owner": "a939ac6c-997a-4312-b5d4-69b888a40cc2",
+      "balances": {
+        "INTEN": 100430290.0,
+        "BTC": 0.52182319,
+        "ETH": 0.0,
+        "XLM": 0.0,
+        "XRP": 0.0,
+        "LTC": 0.0
+      },
+      "wallet_addresses": [
+        "WALADDR-WAL-A939AC6C-70418B34",
+        "WALADDR-WAL-A939AC6C-D9F70711",
+        "WALADDR-WAL-A939AC6C-BD425A3A",
+        "WALADDR-WAL-A939AC6C-B3E4C26F",
+        "WALADDR-WAL-A939AC6C-6D7C010C"
+      ],
+      "created": 1762998342.0718513,
+      "external_btc_address": "Error al crear BTC Wallet: BTC RPC Error (Code -4): Wallet file verification failed. Failed to create database path '/root/.bitcoin/wallets/WAL-A939AC6C'. Database already exists.",
+      "external_eth_address": "0x8300B8746D59c5D84fa52453d55C3FaE7A08B438",
+      "external_xlm_address": null,
+      "external_xrp_address": null,
+      "external_ltc_address": null,
+      "external_btc_wallet_id": "WAL-A939AC6C",
+      "evm_private_key": "8252aac48dc1cc9a051081d058f94bec3708c0c0dbf56b00b8e361db8cbf087b"
+    },
+    "WAL-F2B7C585": {
+      "account_id": "WAL-F2B7C585",
+      "owner": "f2b7c585-6146-4573-9172-e61cd85a8ce0",
+      "balances": {
+        "INTEN": 19420.0,
+        "BTC": 0.000135,
+        "ETH": 0.0,
+        "XLM": 500.0,
+        "XRP": 0.0,
+        "LTC": 2.5
+      },
+      "wallet_addresses": [
+        "WALADDR-WAL-F2B7C585-B01E2AA4"
+      ],
+      "created": 1763069087.9424312,
+      "external_btc_address": "bc1qtgsh5l0w2q8upyajrmmsastz032ugz0nk0fmke",
+      "external_eth_address": null,
+      "external_xlm_address": null,
+      "external_xrp_address": null,
+      "external_ltc_address": null,
+      "external_btc_wallet_id": "WAL-F2B7C585"
+    },
+    "WAL-57B87763": {
+      "account_id": "WAL-57B87763",
+      "owner": "57b87763-84de-40c0-a2de-d72026374b9b",
+      "balances": {
+        "INTEN": 0.0,
+        "BTC": 0.0,
+        "ETH": 0.0,
+        "XLM": 0.0,
+        "XRP": 0.0,
+        "LTC": 0.0
+      },
+      "wallet_addresses": [
+        "WALADDR-WAL-57B87763-0BFD5F72",
+        "WALADDR-WAL-57B87763-9A1A7DE4"
+      ],
+      "created": 1763849532.8245366,
+      "external_btc_address": null,
+      "external_eth_address": null,
+      "external_xlm_address": null,
+      "external_xrp_address": null,
+      "external_ltc_address": null,
+      "external_btc_wallet_id": null
+    },
+    "WAL-A22DD7D8": {
+      "account_id": "WAL-A22DD7D8",
+      "owner": "a22dd7d8-766d-421a-a1ab-6509640a94ca",
+      "balances": {
+        "INTEN": 0.0,
+        "BTC": 0.0,
+        "ETH": 0.0,
+        "XLM": 0.0,
+        "XRP": 0.0,
+        "LTC": 0.0
+      },
+      "wallet_addresses": [
+        "WALADDR-WAL-A22DD7D8-DC61A0FB"
+      ],
+      "created": 1764034852.1241536,
+      "external_btc_address": null,
+      "external_eth_address": null,
+      "external_xlm_address": null,
+      "external_xrp_address": null,
+      "external_ltc_address": null,
+      "external_btc_wallet_id": null
+    },
+    "WAL-8238D975": {
+      "account_id": "WAL-8238D975",
+      "owner": "8238d975-8c7b-4237-a188-44c866f82eb7",
+      "balances": {
+        "INTEN": 0.0,
+        "DGDM": 0.0,
+        "USDT": 0.0,
+        "BTC": 0.0,
+        "ETH": 0.0,
+        "XLM": 0.0,
+        "XRP": 0.0,
+        "LTC": 0.0
+      },
+      "wallet_addresses": [
+        "WALADDR-WAL-8238D975-F851E747"
+      ],
+      "external_btc_address": null,
+      "external_btc_wallet_id": null,
+      "external_eth_address": null,
+      "external_xlm_address": null,
+      "external_xrp_address": null,
+      "external_ltc_address": null,
+      "created": 1770081236.13052
+    }
+  },
+  "ledger": [
+    {
+      "type": "admin_set_rate",
+      "symbol": "INTEN",
+      "price": 1.5,
+      "ts": 1770079564.1323454
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "USDT",
+      "price": 1.0,
+      "ts": 1770079594.5291564
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "DGDM",
+      "price": 2.67,
+      "ts": 1770079623.0692565
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "INTEN",
+      "price": 1.5,
+      "ts": 1770083544.1087685
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "DGDM",
+      "price": 2.67,
+      "ts": 1770083588.7730517
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "USDT",
+      "price": 1.0,
+      "ts": 1770083614.7311814
+    },
+    {
+      "type": "send_inten_to_metamask_dgdm",
+      "from": "WAL-A939AC6C",
+      "amount_inten": 1000.0,
+      "amount_dgdm": 561.7977528089888,
+      "evm_address": "0x8300B8746D59c5D84fa52453d55C3FaE7A08B438",
+      "tx": "69df526574f0fe788ddd02698fb988545f4fb4e7a4548adc5cfa1f7a1fae0c19",
+      "ts": 1770157967.6326044
+    },
+    {
+      "type": "create_wallet",
+      "account": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-6D7C010C",
+      "ts": 1770158222.1147106
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 100000000.0,
+      "ts": 1770661424.4003901
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "INTEN",
+      "price": 1.5,
+      "ts": 1770661533.4956567
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "DGDM",
+      "price": 2.67,
+      "ts": 1770661601.0609808
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "USDT",
+      "price": 1.0,
+      "ts": 1770661630.9402218
+    },
+    {
+      "type": "admin_set_rate",
+      "symbol": "INTEN",
+      "price": 1.5,
+      "ts": 1770661670.9896097
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770661691.122157
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770661991.624998
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770662291.871467
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770662592.3015664
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770662892.7699602
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770663193.8661747
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770663494.1041052
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770663794.2738004
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770664094.607779
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770664394.8914366
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770666499.2563055
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770666799.3987286
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770667099.658816
+    },
+    {
+      "type": "send_inten_to_metamask_usdt",
+      "from": "WAL-A939AC6C",
+      "amount_inten": 1000.0,
+      "amount_usdt": 1000.0,
+      "evm_address": "0x8300B8746D59c5D84fa52453d55C3FaE7A08B438",
+      "tx": "4651f28cabf931731491be46fb9bac30ca01e97e27ab01a255deb18b4e51ab8f",
+      "ts": 1770667142.7902095
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770667400.7226858
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770667700.9070215
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770668001.0577402
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770668301.386612
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770668601.9253414
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770668902.1243768
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770669202.3802874
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770669502.8340425
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770669803.0060573
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770670103.2400815
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770670403.7060804
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770670703.973278
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770671304.49174
+    },
+    {
+      "type": "bridge_deposit",
+      "symbol": "INTEN",
+      "to": "WAL-A939AC6C",
+      "wallet": "WALADDR-WAL-A939AC6C-70418B34",
+      "amount": 5.0,
+      "ts": 1770671604.8765247
+    }
+  ],
+  "rates": {
+    "INTEN": 1.5,
+    "DGDM": 2.67,
+    "USDT": 1.0,
+    "BTC": 70394.0,
+    "ETH": 2116.99,
+    "XLM": 0.161106,
+    "XRP": 1.45,
+    "LTC": 54.71
+  }
+}

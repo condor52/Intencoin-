@@ -1,0 +1,28 @@
+{
+  "name": "intencoin-wallet",
+  "version": "0.2.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@node-rs/bcrypt": "^1.10.7",
+    "axios": "^1.7.0",
+    "bcryptjs": "^2.4.3",
+    "bip32": "^5.0.0",
+    "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^6.1.6",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.9.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
+    "sql.js": "^1.13.0",
+    "tiny-secp256k1": "^2.2.4",
+    "uuid": "^9.0.1"
+  }
+}

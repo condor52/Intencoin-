@@ -1,0 +1,22 @@
+/* === BOOTSTRAP (auto) === */
+try {
+  if (typeof app === "undefined") {
+    const express = require("express");
+    const path = require("path");
+    global.app = express();
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use(express.static(path.join(__dirname, "static")));
+    app.get("/", (req,res)=> res.sendFile(path.join(__dirname, "static", "index.html")));
+  }
+} catch(e) { console.error("bootstrap error:", e); }
+/* === END BOOTSTRAP === */
+
+// ---- Listen shim (no colisiona si ya existe PORT) ----
+(function(){
+  try{
+    const p = (typeof PORT!=='undefined' && PORT) ? PORT : (process.env.PORT||3000);
+      app.listen(p, ()=> console.log('INTEN Wallet listening on', p));
+    }
+  }catch(e){ console.error('listen error:', e); }
+})();

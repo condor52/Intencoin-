@@ -1,0 +1,274 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const { randomUUID } = require('crypto');
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ---- Static + index ----
+app.use(express.static(path.join(__dirname, 'static')));
+app.get('/', (_req, res)=> res.sendFile(path.join(__dirname,'static','index.html')));
+
+// ---- Storage paths ----
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS = path.join(DATA_DIR, 'users.json');       // { uid: {email, name, password, balance, account_no, address} }
+const ADDRS = path.join(DATA_DIR, 'addresses.json');   // { address: uid }
+const TXS   = path.join(DATA_DIR, 'transactions.json');// [ ... ]
+
+function readJSON(p, def){ try{ return JSON.parse(fs.readFileSync(p,'utf8')||''); }catch{ return def; } }
+function writeJSON(p, v){ fs.writeFileSync(p, JSON.stringify(v,null,2)); }
+
+// ---- Tiny token store (in-memory) ----
+const tokens = new Map(); // token -> uid
+
+function genAddress(){
+  // dirección "tipo Intencoin" simple para UI (tu sistema real puede registrar luego)
+  return randomUUID().replace(/-/g,'').slice(0,34);
+}
+function ensureAccountNo(uid){
+  return 'INTEN-' + uid.slice(0,8).toUpperCase();
+}
+
+// ===== AUTH =====
+app.post('/auth/register', (req,res)=>{
+  try{
+    const {name='', email='', password=''} = req.body||{};
+    const em = (email||'').toLowerCase().trim();
+    if(!em || !password) return res.status(400).json({error:'email/password required'});
+
+    const users = readJSON(USERS, {});
+    // no duplicados por email
+    for(const u of Object.values(users)){
+      if((u.email||'').toLowerCase()===em) return res.status(409).json({error:'email exists'});
+    }
+    const uid = randomUUID();
+    const address = genAddress();
+    const account_no = ensureAccountNo(uid);
+
+    users[uid] = { uid, name, email: em, password, balance: 0, account_no, address };
+    writeJSON(USERS, users);
+
+    const amap = readJSON(ADDRS, {});
+    amap[address] = uid;
+    writeJSON(ADDRS, amap);
+
+    const token = randomUUID();
+    tokens.set(token, uid);
+
+    return res.json({ ok:true, token, user:{ uid, name, email:em, account_no, address } });
+  }catch(e){ console.error('/auth/register', e); return res.status(500).json({error:'server'}); }
+});
+
+app.post('/auth/login', (req,res)=>{
+  try{
+    const {email='', password=''} = req.body||{};
+    const em = (email||'').toLowerCase().trim();
+    const users = readJSON(USERS, {});
+    const entry = Object.values(users).find(u=> (u.email||'').toLowerCase()===em && u.password===password);
+    if(!entry) return res.status(401).json({error:'invalid credentials'});
+
+    const token = randomUUID();
+    tokens.set(token, entry.uid);
+    return res.json({ ok:true, token, user:{ uid:entry.uid, name:entry.name, email:entry.email, account_no:entry.account_no, address: entry.address } });
+  }catch(e){ console.error('/auth/login', e); return res.status(500).json({error:'server'}); }
+});
+
+// ===== auth middleware =====
+function auth(req,res,next){
+  try{
+    const h = req.headers['authorization']||'';
+    const m = h.match(/^Bearer\s+(.+)$/i);
+    if(!m) return res.status(401).json({error:'no token'});
+    const token = m[1];
+    const uid = tokens.get(token);
+    if(!uid) return res.status(401).json({error:'invalid token'});
+    req.uid = uid;
+    next();
+  }catch(e){ return res.status(401).json({error:'auth'}); }
+}
+
+// ===== API (privadas para HTML) =====
+
+// Balance del usuario autenticado (de users.json)
+app.get('/api/balance', auth, (req,res)=>{
+  const users = readJSON(USERS, {});
+  const u = users[req.uid];
+  if(!u) return res.status(404).json({error:'user'});
+  return res.json({ ok:true, balance: Number(u.balance||0), account_no: u.account_no, address: u.address });
+});
+
+// Crear/asegurar wallet/dirección propia (si ya hay, la devuelve)
+app.post('/api/wallet/create', auth, (req,res)=>{
+  const users = readJSON(USERS, {});
+  const amap = readJSON(ADDRS, {});
+  const u = users[req.uid];
+  if(!u) return res.status(404).json({error:'user'});
+  if(!u.address){
+    u.address = genAddress();
+    amap[u.address] = req.uid;
+  }
+  if(!u.account_no) u.account_no = ensureAccountNo(req.uid);
+  writeJSON(USERS, users);
+  writeJSON(ADDRS, amap);
+  return res.json({ ok:true, address: u.address, account_no: u.account_no });
+});
+
+// Transferencia interna por email (lógico, dentro del Node)
+app.post('/api/transfer', auth, (req,res)=>{
+  const { toEmail='', amount } = req.body||{};
+  const a = Number(amount||0);
+  if(!toEmail || !(a>0)) return res.status(400).json({error:'params'});
+  const users = readJSON(USERS, {});
+  const from = users[req.uid];
+  if(!from) return res.status(404).json({error:'user'});
+  const to = Object.values(users).find(u=> (u.email||'').toLowerCase().trim() === toEmail.toLowerCase().trim());
+  if(!to) return res.status(404).json({error:'dest'});
+  if(Number(from.balance||0) < a) return res.status(400).json({error:'insufficient'});
+
+  from.balance = +(Number(from.balance||0) - a).toFixed(6);
+  to.balance   = +(Number(to.balance||0) + a).toFixed(6);
+
+  const txs = readJSON(TXS, []);
+  const now = Date.now();
+  txs.push({ id: randomUUID(), user_id: req.uid, type:'transfer_out', amount:-a, balance_after: from.balance, note:`to ${to.email}`, created_at: now });
+  txs.push({ id: randomUUID(), user_id: to.uid,  type:'transfer_in',  amount:+a, balance_after: to.balance,   note:`from ${from.email}`, created_at: now });
+
+  writeJSON(USERS, users);
+  writeJSON(TXS, txs);
+  return res.json({ ok:true, from_balance: from.balance });
+});
+
+// Solicitud de retiro a dirección externa (solo registra intención; tu webhook real es /public/withdraw)
+app.post('/api/withdraw-request', auth, (req,res)=>{
+  const { external_address='', amount } = req.body||{};
+  const a = Number(amount||0);
+  if(!external_address || !(a>0)) return res.status(400).json({error:'params'});
+
+  const users = readJSON(USERS, {});
+  const from = users[req.uid];
+  if(!from) return res.status(404).json({error:'user'});
+  if(Number(from.balance||0) < a) return res.status(400).json({error:'insufficient'});
+
+  // Descuenta aquí mismo para que UI refleje
+  from.balance = +(Number(from.balance||0) - a).toFixed(6);
+
+  const txs = readJSON(TXS, []);
+  txs.push({ id: randomUUID(), user_id: req.uid, type:'withdraw_req', amount:-a, balance_after: from.balance, note:`to ${external_address}`, created_at: Date.now() });
+
+  writeJSON(USERS, users);
+  writeJSON(TXS, txs);
+  return res.json({ ok:true, balance: from.balance });
+});
+
+// Listar transacciones del usuario
+app.get('/api/transactions', auth, (req,res)=>{
+  const txs = readJSON(TXS, []);
+  return res.json({ ok:true, items: txs.filter(t=>t.user_id===req.uid).sort((a,b)=>b.created_at-a.created_at).slice(0,200) });
+});
+
+// ===== Servidor =====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, ()=> console.log('INTEN Wallet listening on', PORT));
+
+// === PUBLIC API (balance & register_address) – safe append ===
+try {
+  const _DATA_DIR = (typeof DATA_DIR!=='undefined') ? DATA_DIR : path.join(__dirname,'data');
+  const _USERS    = (typeof USERS!=='undefined')    ? USERS    : path.join(_DATA_DIR,'users.json');
+  const _ADDRS    = (typeof ADDRS!=='undefined')    ? ADDRS    : path.join(_DATA_DIR,'addresses.json');
+
+  // Crea archivos si faltan
+  if (!fs.existsSync(_DATA_DIR)) fs.mkdirSync(_DATA_DIR, {recursive:true});
+  if (!fs.existsSync(_USERS)) fs.writeFileSync(_USERS, '{}');
+  if (!fs.existsSync(_ADDRS)) fs.writeFileSync(_ADDRS, '{}');
+
+  // GET /public/balance?address=ADDR
+  if (!app._router || !app._router.stack.some(x => x.route && x.route.path==='/public/balance')) {
+    app.get('/public/balance', (req,res)=>{
+      try{
+        const address = (req.query.address||'').toString().trim();
+        if (!address) return res.status(400).json({error:'address missing'});
+
+        const users = JSON.parse(fs.readFileSync(_USERS,'utf8')||'{}');
+        const amap  = JSON.parse(fs.readFileSync(_ADDRS,'utf8')||'{}');
+        const uid = amap[address];
+        if (!uid || !users[uid]) return res.status(404).json({error:'address not found'});
+
+        const u = users[uid];
+        return res.json({ address, account_no: u.account_no || uid, balance: Number(u.balance||0) });
+      } catch(e){ console.error('public/balance error:', e); return res.status(500).json({error:'server'}); }
+    });
+  }
+
+  // POST /public/register_address  {user_id, email, account_no, address}
+  if (!app._router || !app._router.stack.some(x => x.route && x.route.path==='/public/register_address')) {
+    app.post('/public/register_address', (req,res)=>{
+      try{
+        const { user_id, email, account_no, address } = req.body || {};
+        if (!user_id || !address) return res.status(400).json({error:'params'});
+
+        const users = JSON.parse(fs.readFileSync(_USERS,'utf8')||'{}');
+        const amap  = JSON.parse(fs.readFileSync(_ADDRS,'utf8')||'{}');
+
+        if (!users[user_id]) users[user_id] = { uid:user_id, email:email||null, account_no:account_no||user_id, balance: Number(users[user_id]?.balance||0) };
+        amap[address] = user_id;
+
+        fs.writeFileSync(_USERS, JSON.stringify(users,null,2));
+        fs.writeFileSync(_ADDRS, JSON.stringify(amap,null,2));
+
+        return res.json({ ok:true, user_id, address, account_no: users[user_id].account_no, balance: Number(users[user_id].balance||0) });
+      } catch(e){ console.error('public/register_address error:', e); return res.status(500).json({error:'server'}); }
+    });
+  }
+} catch(e){ console.error('PUBLIC API append failed:', e); }
+// === END PUBLIC API ===
+
+// 3) deposit webhook (público, requiere x-deposit-secret)
+app.post('/public/deposit', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!address || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const fs = require('fs');
+    const path = require('path');
+    const { randomUUID } = require('crypto');
+
+    const DATA_DIR = path.join(__dirname, 'data');
+    const USERS = path.join(DATA_DIR, 'users.json');
+    const ADDRS = path.join(DATA_DIR, 'addresses.json');
+    const TXS   = path.join(DATA_DIR, 'transactions.json');
+
+    if (!fs.existsSync(USERS) || !fs.existsSync(ADDRS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(ADDRS, 'utf8') || '{}');
+
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const u = users[uid];
+    const newBalance = Number(u.balance || 0) + a;
+    u.balance = newBalance;
+
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+    txs.push({ id, user_id: uid, type: 'deposit', amount: a, balance_after: newBalance, note: note || 'deposit', created_at: now });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    return res.json({ ok: true, address, balance: newBalance, tx_id: id });
+  } catch (e) {
+    console.error('public/deposit error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>INTENCOIN CRYPTOCURRENCY</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root { --bg:#0f1220; --card:#151a38; --line:#232a61; --ink:#eaf0ff; --muted:#9aa0d0; }
+  * { box-sizing: border-box }
+  body{font-family:system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:var(--ink)}
+  header{display:flex;gap:16px;align-items:center;padding:16px 20px;background:#141834;border-bottom:1px solid #222757}
+  .logo{width:64px;height:64px;border:2px dashed #2f3560;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9aa0d0}
+  main{max-width:980px;margin:20px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+  input,button{padding:10px;border-radius:10px;border:1px solid #2a3369;background:#0f1330;color:var(--ink)}
+  button{cursor:pointer}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .hide{display:none}
+  .pill{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:#0f1330}
+</style>
+</head>
+<body>
+<header>
+  <img src="/static/logo.png" class="logo" alt="LOGO" />
+  <div>
+    <div style="font-size:20px;font-weight:700">INTENCOIN CRYPTOCURRENCY</div>
+    <div class="muted">Wallet & API portal</div>
+  </div>
+  <div style="margin-left:auto">
+    <button id="btn_logout" class="pill">Logout</button>
+  </div>
+</header>
+
+<main>
+  <!-- Auth -->
+  <div class="card" id="auth_card">
+    <h3>Register</h3>
+    <div class="row" style="margin-bottom:8px">
+      <input id="r_name" placeholder="Name (optional)" />
+      <input id="r_email" placeholder="Email" />
+      <input id="r_pass" type="password" placeholder="Password" />
+      <button id="btn_register">Create</button>
+    </div>
+    <div id="r_out" class="muted"></div>
+
+    <h3 style="margin-top:18px">Login</h3>
+    <div class="row">
+      <input id="l_email" placeholder="Email" />
+      <input id="l_pass" type="password" placeholder="Password" />
+      <button id="btn_login">Sign in</button>
+    </div>
+    <div id="l_out" class="muted"></div>
+  </div>
+
+  <!-- Dashboard (se muestra solo si hay sesión) -->
+  <div class="card hide" id="dash_card">
+    <h3>Dashboard</h3>
+
+    <!-- Dirección activa (del usuario logueado o creada) -->
+    <div class="row" style="align-items:center">
+      <button id="btn_addr_create">Create Wallet / Address</button>
+      <span class="muted">Current address:</span>
+      <code id="addr_view" class="muted">—</code>
+    </div>
+
+    <!-- Balance + TXs -->
+    <div class="row" style="margin-top:10px">
+      <button id="btn_balance">Balance</button>
+      <span id="bal_out" class="muted"></span>
+      <button id="btn_txs">Refresh transactions</button>
+    </div>
+    <pre id="txs" class="muted" style="white-space:pre-wrap;font-size:13px;margin-top:8px"></pre>
+
+    <!-- Send: por email o por address -->
+    <div class="row" style="margin-top:10px">
+      <input id="send_to" placeholder="Send to (email or address)" />
+      <input id="send_amt" placeholder="Amount" />
+      <button id="btn_send">Send</button>
+      <span class="muted">Tip: email → internal; address → address-to-address</span>
+    </div>
+    <div id="send_out" class="muted" style="margin-top:4px"></div>
+
+    <!-- Withdraw (hacia Python / externo) -->
+    <div class="row" style="margin-top:10px">
+      <input id="wd_ext" placeholder="External address (Python/chain)" />
+      <input id="wd_amt" placeholder="Amount" />
+      <button id="btn_withdraw">Withdraw</button>
+    </div>
+    <div id="wd_out" class="muted" style="margin-top:4px"></div>
+
+    <!-- Conversion (usa TODO el balance; sin pedir URL de Python en pantalla) -->
+    <div class="card" style="margin-top:14px">
+      <h3>Convert balance</h3>
+      <div class="row">
+        <button class="pill" data-sym="USD">USD</button>
+        <button class="pill" data-sym="EUR">EUR</button>
+        <button class="pill" data-sym="BTC">BTC</button>
+        <button class="pill" data-sym="ETH">ETH</button>
+        <button class="pill" data-sym="DOGE">DOGE</button>
+        <button class="pill" data-sym="XLM">XLM</button>
+        <button class="pill" data-sym="DGD">DGD</button>
+        <button class="pill" data-sym="DEN">DEN</button>
+        <button class="pill" data-sym="AMR">AMR</button>
+      </div>
+      <div id="conv_out" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+</main>
+<div class="card" id="section_conv" style="display:block;"><h3>Currency conversion</h3><div class="row" style="gap:6px; flex-wrap:wrap;"><button id="btn_BTC">BTC</button><button id="btn_ETH">ETH</button><button id="btn_DOGE">DOGE</button><button id="btn_XLM">XLM</button><button id="btn_USD">USD</button><button id="btn_EUR">EUR</button><button id="btn_AMR">AMR</button><button id="btn_DGD">DGD</button><button id="btn_DEN">DEN</button></div><div id="conv_out" class="muted" style="margin-top:8px"></div></div>
+
+
+
+
+
+
+
+
+
+
+<script src="/static/app.js"></script>
+</body>
+</html>
+
+
+
+
+0
+

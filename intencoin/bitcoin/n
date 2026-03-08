@@ -1,0 +1,25 @@
+ed (ahorra espacio)
+prune=550
+
+# RPC Configuration
+server=1
+rpcuser=INTEN
+rpcpassword=INTENCOIN
+rpcport=8332
+
+# Permitir conexiones RPC desde localhost
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+
+# Habilitar wallet RPC
+deprecatedrpc=create_bdb
+
+# Network (mainnet por defecto, usa testnet=1 para pruebas)
+# testnet=1  # Descomenta para red de pruebas
+
+# Logs
+debug=rpc
+
+
+
+

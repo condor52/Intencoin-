@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTEN Wallet</title>
+<style>
+  :root { --bg:#001f3f; --panel:#02284f; --ink:#e6f1ff; --muted:#a9c1dd; --btn:#0bd; --btn2:#0b5; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Arial;background:var(--bg);color:var(--ink)}
+  header{padding:16px 20px;border-bottom:1px solid #033355}
+  main{max-width:980px;margin:18px auto;padding:0 14px}
+  .card{background:var(--panel);border:1px solid #033a66;border-radius:14px;padding:14px;margin:12px 0}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  input,button{padding:10px;border-radius:10px;border:1px solid #04406f;background:#012a4a;color:var(--ink)}
+  button{cursor:pointer}
+  .btn{background:var(--btn);border:none;color:#012; font-weight:700}
+  .btn2{background:var(--btn2);border:none;color:#012; font-weight:700}
+  pre{white-space:pre-wrap;background:#012642;border-radius:10px;padding:10px;color:#d8ecff}
+  .muted{color:var(--muted)}
+  [data-dashboard]{display:none}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0">INTEN Wallet</h1>
+  <div class="muted">Single-page UI connected to your Node API</div>
+</header>
+
+<main>
+  <section id="public-area" class="card">
+    <h2>Register</h2>
+    <div class="grid2">
+      <input id="r_name" placeholder="Name (optional)">
+      <input id="r_email" placeholder="Email">
+      <input id="r_pass" type="password" placeholder="Password">
+      <button id="btn_register" class="btn">Register</button>
+    </div>
+    <pre id="r_out" class="muted"></pre>
+
+    <h2>Login</h2>
+    <div class="grid2">
+      <input id="l_email" placeholder="Email">
+      <input id="l_pass" type="password" placeholder="Password">
+      <button id="btn_login" class="btn2">Login</button>
+    </div>
+    <pre id="l_out" class="muted"></pre>
+  </section>
+
+  <section data-dashboard class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Dashboard</h2>
+      <button id="btn_logout" class="">Logout</button>
+    </div>
+
+    <h3>Account</h3>
+    <div class="row">
+      <button id="btn_balance" class="btn2">Check Balance</button>
+      <button id="btn_wallet" class="btn2">Create Wallet</button>
+      <button id="btn_txs" class="btn2">Transactions</button>
+    </div>
+    <pre id="bal"></pre>
+    <pre id="addr"></pre>
+
+    <h3>Transfer (by email)</h3>
+    <div class="grid2">
+      <input id="to_email" placeholder="Recipient email">
+      <input id="amt" placeholder="Amount">
+      <button id="btn_transfer" class="btn">Transfer</button>
+    </div>
+
+    <h3>Withdraw (external)</h3>
+    <div class="grid2">
+      <input id="ext" placeholder="External address">
+      <input id="wamt" placeholder="Amount">
+      <button id="btn_withdraw" class="btn">Withdraw</button>
+    </div>
+
+    <h3>Transactions</h3>
+    <pre id="txs"></pre>
+
+    <h3>Action output</h3>
+    <pre id="a_out"></pre>
+  </section>
+</main>
+
+<script>
+/* ===== Helpers ===== */
+const $ = id => document.getElementById(id);
+let TOKEN = localStorage.getItem('INTEN_TOKEN') || null;
+
+function setToken(tok){
+  TOKEN = tok;
+  if (tok) localStorage.setItem('INTEN_TOKEN', tok);
+  else localStorage.removeItem('INTEN_TOKEN');
+}
+function showDashboard(auth){
+  const dash = document.querySelector('[data-dashboard]');
+  const pub  = document.getElementById('public-area');
+  if (!dash || !pub) return;
+  dash.style.display = auth ? 'block' : 'none';
+  pub.style.display  = auth ? 'none'  : 'block';
+}
+
+async function api(path, method='GET', body=null){
+  const headers = { 'Content-Type':'application/json' };
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : null });
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = { error:'non-json', status:res.status, text }; }
+  if (!res.ok) throw json;
+  return json;
+}
+
+/* ===== Auth ===== */
+async function doRegister(){
+  const body = {
+    name: ($('#r_name').value||'').trim(),
+    email:($('#r_email').value||'').trim(),
+    password:($('#r_pass').value||'').trim(),
+  };
+  try {
+    const out = await api('/auth/register','POST', body);
+    $('#r_out').innerText = JSON.stringify(out,null,2);
+    if (out.token){ setToken(out.token); showDashboard(true); await doBalance(); }
+  } catch(err){ $('#r_out').innerText = JSON.stringify(err,null,2); }
+}
+async function doLogin(){
+  const body = {
+    email:($('#l_email').value||'').trim(),
+    password:($('#l_pass').value||'').trim(),
+  };
+  try {
+    const out = await api('/auth/login','POST', body);
+    $('#l_out').innerText = JSON.stringify(out,null,2);
+    if (out.token){ setToken(out.token); showDashboard(true); await doBalance(); }
+  } catch(err){ $('#l_out').innerText = JSON.stringify(err,null,2); }
+}
+function doLogout(){
+  setToken(null);
+  showDashboard(false);
+  $('#bal').innerText=''; $('#addr').innerText=''; $('#txs').innerText=''; $('#a_out').innerText='';
+}
+
+/* ===== Protected ops ===== */
+async function doBalance(){
+  try{ const out = await api('/api/balance'); $('#bal').innerText = JSON.stringify(out,null,2); }
+  catch(err){ $('#bal').innerText = JSON.stringify(err,null,2); }
+}
+async function doCreateWallet(){
+  try{ const out = await api('/api/wallet/create','POST',{}); $('#addr').innerText = JSON.stringify(out,null,2); }
+  catch(err){ $('#addr').innerText = JSON.stringify(err,null,2); }
+}
+async function doTransfer(){
+  const body = { toEmail:($('#to_email').value||'').trim(), amount: parseFloat($('#amt').value||'0') };
+  try{ const out = await api('/api/transfer','POST',body); $('#a_out').innerText = JSON.stringify(out,null,2); await doBalance(); }
+  catch(err){ $('#a_out').innerText = JSON.stringify(err,null,2); }
+}
+async function doWithdraw(){
+  const body = { external_address:($('#ext').value||'').trim(), amount: parseFloat($('#wamt').value||'0') };
+  try{ const out = await api('/api/withdraw-request','POST',body); $('#a_out').innerText = JSON.stringify(out,null,2); await doBalance(); }
+  catch(err){ $('#a_out').innerText = JSON.stringify(err,null,2); }
+}
+async function doTxs(){
+  try{ const out = await api('/api/transactions'); $('#txs').innerText = JSON.stringify(out,null,2); }
+  catch(err){ $('#txs').innerText = JSON.stringify(err,null,2); }
+}
+
+/* ===== Wire UI ===== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Restore session if token exists
+  showDashboard(!!TOKEN);
+
+  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+  on('btn_register', doRegister);
+  on('btn_login',    doLogin);
+  on('btn_logout',   doLogout);
+  on('btn_balance',  doBalance);
+  on('btn_wallet',   doCreateWallet);
+  on('btn_transfer', doTransfer);
+  on('btn_withdraw', doWithdraw);
+  on('btn_txs',      doTxs);
+});
+</script>
+</body>
+</html>

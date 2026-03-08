@@ -1,0 +1,214 @@
+{
+  "1d1bde58-0ced-4f45-befc-3f2ffa9c4145": {
+    "id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "email": "goviukac@gmail.com",
+    "account_no": "INTEN-1D1BDE58",
+    "deposit_address": "1G1Ei3pNC8iNsXcM9r7o13zdwN67RtCJ5z",
+    "balance": 4838,
+    "created_at": 1761959456000
+  },
+  "4fe4653a-6510-469d-a656-e103f4e24aac": {
+    "uid": "4fe4653a-6510-469d-a656-e103f4e24aac",
+    "name": "Test",
+    "email": "test@example.com",
+    "password": "123",
+    "balance": 0,
+    "account_no": "INTEN-4FE4653A",
+    "address": "7d8e5ced9cf74340ab9e50c64e7ca59d"
+  },
+  "ed007c0a-3f4a-40c7-b843-4faba1973ba6": {
+    "uid": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "name": "Luis",
+    "email": "skyynet38@gmail.com",
+    "password": "5929",
+    "balance": 205,
+    "account_no": "INTEN-ED007C0A",
+    "address": "73e755ba5b2f4cb89115012e114c51c9"
+  },
+  "303af25f-4f61-4ac5-8dfb-71dab717df92": {
+    "uid": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "name": "Luis Sender",
+    "email": "sender@example.com",
+    "password": "P@ss1234",
+    "balance": 890,
+    "account_no": "INTEN-303AF25F",
+    "address": "8760a8429a6d45389595fbcbc0112128"
+  },
+  "072d8160-3f30-4f2c-a22b-4f0ef28030d4": {
+    "uid": "072d8160-3f30-4f2c-a22b-4f0ef28030d4",
+    "email": "receiver@example.com",
+    "account_no": "INTEN-072D8160",
+    "balance": 25
+  },
+  "260b378e-b118-4297-9e60-edb1e9b38292": {
+    "uid": "260b378e-b118-4297-9e60-edb1e9b38292",
+    "name": "Daniel",
+    "email": "luis@yhhhh.com",
+    "password": "5929",
+    "balance": 450,
+    "account_no": "INTEN-260B378E",
+    "address": "50f12f3a0f2440f0836c6be8d88d645c"
+  },
+  "af9ce986-d894-4081-a210-11a6c49391f4": {
+    "uid": "af9ce986-d894-4081-a210-11a6c49391f4",
+    "name": "User8965",
+    "email": "test14093@example.net",
+    "password": "123456",
+    "balance": 0,
+    "account_no": "INTEN-AF9CE986",
+    "address": "6ufnsc0ay0927klti2hjzx"
+  },
+  "a8b59b39-b2e5-46aa-89df-f7fbf963393a": {
+    "uid": "a8b59b39-b2e5-46aa-89df-f7fbf963393a",
+    "name": "Test",
+    "email": "test@a.com",
+    "password": "123",
+    "balance": 0,
+    "account_no": "INTEN-A8B59B39",
+    "address": "6pxpxonqp9t3rrzlbz5dk"
+  },
+  "902c9168-e301-42f3-82f5-b67d920dfaad": {
+    "uid": "902c9168-e301-42f3-82f5-b67d920dfaad",
+    "name": "Test",
+    "email": "user_7638@example.com",
+    "password": "123456",
+    "balance": 0,
+    "account_no": "INTEN-902C9168",
+    "address": "spikho4c5ca89its49bv5h"
+  },
+  "be796719-50e3-4b60-8649-8812e822dd82": {
+    "uid": "be796719-50e3-4b60-8649-8812e822dd82",
+    "name": "TestUser",
+    "email": "user_1762369085@example.com",
+    "password": "123456",
+    "balance": 0,
+    "account_no": "INTEN-BE796719",
+    "address": "3pevu5h90sw9aitt433m"
+  },
+  "2195ec28-88f5-4cb4-bccc-daa0b3137ab4": {
+    "uid": "2195ec28-88f5-4cb4-bccc-daa0b3137ab4",
+    "name": "Recv",
+    "email": "recv_1762369085@example.com",
+    "password": "123456",
+    "balance": 0,
+    "account_no": "INTEN-2195EC28",
+    "address": "i9mm684s1fbid0xtj6ckjl"
+  },
+  "420019e1-cb7c-4f7d-915d-a8a417df4996": {
+    "uid": "420019e1-cb7c-4f7d-915d-a8a417df4996",
+    "name": "Test User",
+    "email": "testuser_1762372811@example.com",
+    "password": "TestPassword123",
+    "balance": 0,
+    "account_no": "INTEN-420019E1",
+    "address": "uhshqc05v6icn2zn9hyf16"
+  },
+  "636c42b2-324f-4045-aa49-8caa6033767a": {
+    "uid": "636c42b2-324f-4045-aa49-8caa6033767a",
+    "name": "Test User",
+    "email": "testuser_1762374142@example.com",
+    "password": "TestPassword123",
+    "balance": 0,
+    "account_no": "INTEN-636C42B2",
+    "address": "7gfckce7bq3vtrvf2cxti9"
+  },
+  "9c5e696a-6b9b-4efd-903d-1f80477e59f0": {
+    "uid": "9c5e696a-6b9b-4efd-903d-1f80477e59f0",
+    "name": "KING LUDWIG FALKENSTEIN HASBURGO",
+    "email": "Ggghh@hhhh.com",
+    "password": "4040",
+    "balance": 0,
+    "account_no": "INTEN-9C5E696A",
+    "address": "7ojr0k3leggn20jqzs9wx"
+  },
+  "d7e61256-c51a-4cc8-bb09-8b050be9651d": {
+    "uid": "d7e61256-c51a-4cc8-bb09-8b050be9651d",
+    "name": "Sender",
+    "email": "sender_1762374987@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-D7E61256",
+    "address": "vpz3ukn35j0mb0ie0fagwd"
+  },
+  "5909f616-b9db-4f2d-abae-6c5d806731c9": {
+    "uid": "5909f616-b9db-4f2d-abae-6c5d806731c9",
+    "name": "Sender",
+    "email": "sender_1762375551@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-5909F616",
+    "address": "0oyl9fcqk0zcqj33mg1n0k"
+  },
+  "a15b6825-6d11-4a5a-8bb4-4f2286e82014": {
+    "uid": "a15b6825-6d11-4a5a-8bb4-4f2286e82014",
+    "name": "Sender",
+    "email": "sender_1762377343@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-A15B6825",
+    "address": "ykry96vsjwmkz3tzyimeuc"
+  },
+  "e004e892-83b7-4d60-9eb9-a946a8cb8d10": {
+    "uid": "e004e892-83b7-4d60-9eb9-a946a8cb8d10",
+    "name": "Sender",
+    "email": "sender_1762377521@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-E004E892",
+    "address": "v6a0tt3cby9r77ekodf1ki"
+  },
+  "5d81fb00-c1fc-4d99-933b-6fc878efcfa8": {
+    "uid": "5d81fb00-c1fc-4d99-933b-6fc878efcfa8",
+    "name": "Sender",
+    "email": "sender_1762377807@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-5D81FB00",
+    "address": "i8js55xu2gxw0rd1rtp5l"
+  },
+  "5d1f1fc3-3398-477b-bff2-3a4b935ae3a1": {
+    "uid": "5d1f1fc3-3398-477b-bff2-3a4b935ae3a1",
+    "name": "Sender",
+    "email": "sender_1762378166@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-5D1F1FC3",
+    "address": "n7m1lqy3tyslg63kbqdqo"
+  },
+  "6feaafb6-6d06-428b-8bad-c2c67b13d5cc": {
+    "uid": "6feaafb6-6d06-428b-8bad-c2c67b13d5cc",
+    "name": "Sender",
+    "email": "sender_1762381918@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-6FEAAFB6",
+    "address": "caem8qdtri7bklrbivmx2"
+  },
+  "d90c04c1-9aa5-40c0-b57a-d20a75465c86": {
+    "uid": "d90c04c1-9aa5-40c0-b57a-d20a75465c86",
+    "name": "Sender",
+    "email": "sender_1762382895@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-D90C04C1",
+    "address": "5yp5s4urzr99poj86a32se"
+  },
+  "901826cf-b4b2-45ac-b8d7-f002baacc745": {
+    "uid": "901826cf-b4b2-45ac-b8d7-f002baacc745",
+    "name": "Sender",
+    "email": "sender_1762383176@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-901826CF",
+    "address": "4tveiljksxd8k70119df4w"
+  },
+  "b0fff382-1818-4e90-b194-5f8025dd386e": {
+    "uid": "b0fff382-1818-4e90-b194-5f8025dd386e",
+    "name": "Sender",
+    "email": "sender_1762383281@example.com",
+    "password": "SenderPass123!",
+    "balance": 0,
+    "account_no": "INTEN-B0FFF382",
+    "address": "6gol1fsjbm3wb42oxhaizi"
+  }
+}

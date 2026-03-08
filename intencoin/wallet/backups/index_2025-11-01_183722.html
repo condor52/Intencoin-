@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INTENCOIN CRYPTOCURRENCY</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#0f1220;--panel:#151a38;--edge:#232a61;--muted:#9aa0d0}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:#fff}
+  header{display:flex;gap:16px;align-items:center;padding:16px 20px;background:#141834;border-bottom:1px solid #222757}
+  .logo{width:64px;height:64px;border:2px dashed #2f3560;border-radius:12px;display:flex;align-items:center;justify-content:center}
+  main{max-width:1060px;margin:20px auto;padding:0 16px}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px}
+  input,button,select{padding:10px;border-radius:10px;border:1px solid #2a3369;background:#0f1330;color:#eaf0ff}
+  button{cursor:pointer}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .muted{color:var(--muted)}
+  .hide{display:none}
+  pre{white-space:pre-wrap;font-size:13px;background:#0e1330;border:1px solid #2a3369;border-radius:10px;padding:10px}
+  .split{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:900px){.split{grid-template-columns:1.2fr .8fr}}
+  .section-title{margin:0 0 8px 0;font-size:18px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <img src="/static/logo.png" class="logo" alt="LOGO">
+  <div>
+    <div style="font-size:20px;font-weight:700">INTENCOIN CRYPTOCURRENCY</div>
+    <div class="muted">Wallet & API portal</div>
+  </div>
+</header>
+
+<main>
+  <!-- AUTH (Register / Login) -->
+  <div class="grid" id="auth_area">
+    <div class="card">
+      <h3 class="section-title">Register</h3>
+      <div class="row">
+        <input id="r_name" placeholder="Name (optional)" autocomplete="name">
+        <input id="r_email" placeholder="Email" autocomplete="email">
+        <input id="r_pass" type="password" placeholder="Password" autocomplete="new-password">
+        <button id="btn_register">Create</button>
+      </div>
+      <div id="r_out" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Login</h3>
+      <div class="row">
+        <input id="l_email" placeholder="Email" autocomplete="email">
+        <input id="l_pass" type="password" placeholder="Password" autocomplete="current-password">
+        <button id="btn_login">Sign in</button>
+      </div>
+      <div id="l_out" class="muted"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD (solo visible cuando hay TOKEN) -->
+  <div id="dash_area" class="split hide">
+    <div class="card">
+      <h3 class="section-title">Account</h3>
+      <div class="row" style="margin-bottom:8px">
+        <button id="btn_balance">Balance</button>
+        <span id="bal" class="muted"></span>
+      </div>
+
+      <div class="row" style="margin-bottom:8px">
+        <button id="btn_create_wallet">Create Wallet / Address</button>
+        <span id="addr" class="muted"></span>
+      </div>
+
+      <div class="row" style="margin-bottom:8px">
+        <input id="to_email" placeholder="Send to (email)">
+        <input id="amt" placeholder="Amount">
+        <button id="btn_send">Transfer</button>
+      </div>
+
+      <div class="row" style="margin-bottom:8px">
+        <input id="ext" placeholder="External address">
+        <input id="wamt" placeholder="Amount">
+        <button id="btn_withdraw">Withdraw</button>
+      </div>
+
+      <div id="a_out" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Transactions</h3>
+      <div class="row" style="margin-bottom:8px">
+        <button id="btn_txs">Refresh</button>
+      </div>
+      <pre id="txs"></pre>
+    </div>
+  </div>
+
+  <!-- CONVERSION (depende del balance actual de INTEN y del servicio Python 8083) -->
+  <div id="conv_area" class="card hide" style="margin-top:16px">
+    <h3 class="section-title">Currency Conversion</h3>
+
+    <div class="row" style="margin-bottom:8px">
+      <input id="py_base" placeholder="Python price API base (e.g. http://127.0.0.1:8083)">
+      <button id="btn_save_py_base">Save</button>
+      <button id="btn_full_amount">Use full balance</button>
+    </div>
+
+    <div class="row" style="margin-bottom:8px">
+      <input id="conv_amount" placeholder="Amount (default: full INTEN balance)">
+      <select id="conv_to">
+        <option value="BTC">BTC (Bitcoin)</option>
+        <option value="ETH">ETH (Ethereum)</option>
+        <option value="DOGE">DOGE (Dogecoin)</option>
+        <option value="XLM">XLM (Stellar)</option>
+        <option value="USD">USD (US Dollar)</option>
+        <option value="EUR">EUR (Euro)</option>
+        <option value="DGD">DGD (Grand Dollars)</option>
+        <option value="DEN">DEN (Denarios)</option>
+        <option value="AMR">AMR (AMR coin)</option>
+      </select>
+      <button id="btn_convert">Convert from INTEN</button>
+    </div>
+
+    <div class="row" style="margin-bottom:8px">
+      <select id="swap_to">
+        <option value="">-- swap (planned, same UI) --</option>
+        <option value="BTC">Swap to BTC</option>
+        <option value="ETH">Swap to ETH</option>
+        <option value="XLM">Swap to XLM</option>
+        <option value="USD">Swap to USD</option>
+      </select>
+      <button id="btn_swap">Swap (not implemented)</button>
+    </div>
+
+    <div id="conv_out" class="muted"></div>
+  </div>
+</main>
+
+<script>
+let TOKEN = null;
+
+/* -------- Helpers -------- */
+function show(el, on){ el.classList[on ? 'remove' : 'add']('hide'); }
+function qs(id){ return document.getElementById(id); }
+function pyBase(){
+  return (localStorage.getItem('py_base') || 'http://127.0.0.1:8083').replace(/\/+$/,'');
+}
+function hydratePyBaseInput(){ const el=qs('py_base'); if(el) el.value = pyBase(); }
+
+async function api(p, m="GET", b=null){
+  const h={"Content-Type":"application/json"};
+  if(TOKEN) h["Authorization"] = "Bearer " + TOKEN;
+  const r = await fetch(p,{method:m,headers:h,body:b?JSON.stringify(b):null});
+  // si la API devuelve HTML de error (404), evita json() que explotaría
+  const ct = r.headers.get('content-type')||'';
+  if (!ct.includes('application/json')) return { error: 'non-json', status: r.status, text: await r.text() };
+  return r.json();
+}
+
+/* -------- Auth -------- */
+async function register(){
+  const out = await api('/auth/register','POST',{
+    name: qs('r_name').value,
+    email: qs('r_email').value,
+    password: qs('r_pass').value
+  });
+  qs('r_out').innerText = JSON.stringify(out);
+  if(out && out.token){ TOKEN = out.token; postLogin(); }
+}
+
+async function login(){
+  const out = await api('/auth/login','POST',{
+    email: qs('l_email').value,
+    password: qs('l_pass').value
+  });
+  qs('l_out').innerText = JSON.stringify(out);
+  if(out && out.token){ TOKEN = out.token; postLogin(); }
+}
+
+function postLogin(){
+  show(qs('auth_area'), false);
+  show(qs('dash_area'), true);
+  show(qs('conv_area'), true);
+  // carga balance y dirección de una vez
+  balance();
+  // opcional: crear wallet si no existe
+}
+
+/* -------- Account -------- */
+async function balance(){
+  const out = await api('/api/balance');
+  qs('bal').innerText = JSON.stringify(out);
+}
+
+async function createWallet(){
+  const out = await api('/api/wallet/create','POST',{});
+  qs('addr').innerText = JSON.stringify(out);
+}
+
+async function transfer(){
+  const a = parseFloat(qs('amt').value || '0');
+  const to = qs('to_email').value.trim();
+  const out = await api('/api/transfer','POST',{toEmail:to, amount:a});
+  qs('a_out').innerText = JSON.stringify(out);
+}
+
+async function withdraw(){
+  const a = parseFloat(qs('wamt').value || '0');
+  const ext = qs('ext').value.trim();
+  const out = await api('/api/withdraw-request','POST',{external_address:ext, amount:a});
+  qs('a_out').innerText = JSON.stringify(out);
+}
+
+async function loadTxs(){
+  const out = await api('/api/transactions');
+  qs('txs').innerText = JSON.stringify(out,null,2);
+}
+
+/* -------- Conversion (via Python 8083) -------- */
+async function useFullBalance(){
+  const b = await api('/api/balance');
+  const inten = Number((b && b.balance) || 0);
+  qs('conv_amount').value = inten > 0 ? inten : '';
+  qs('conv_out').innerText = 'Amount set to full balance: ' + inten;
+}
+
+function savePyBase(){
+  const v = (qs('py_base').value || '').trim();
+  if(v) localStorage.setItem('py_base', v);
+  qs('conv_out').innerText = 'Saved: ' + pyBase();
+}
+
+async function convertFromWallet(){
+  try{
+    // 1) balance INTEN actual
+    const b = await api('/api/balance');
+    const defaultAmt = Number((b && b.balance) || 0);
+    const manual = parseFloat((qs('conv_amount').value || '').trim());
+    const amount = Number.isFinite(manual) && manual > 0 ? manual : defaultAmt;
+    if(!Number.isFinite(amount) || amount <= 0){
+      qs('conv_out').innerText = 'No balance or invalid amount.';
+      return;
+    }
+    const toSym = (qs('conv_to').value || '').toUpperCase();
+
+    // 2) Python /convert (preferido)
+    const endpoint1 = pyBase() + '/convert';
+    let r1 = await fetch(endpoint1, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ from:'INTEN', to:toSym, amount })
+    });
+
+    if (r1.ok) {
+      const j = await r1.json().catch(()=>null);
+      if (j && (j.amount_converted!=null || j.result!=null || j.rate!=null)) {
+        const rate = j.rate ?? (j.result ? j.result/amount : null);
+        const outAmount = j.amount_converted ?? j.result ?? NaN;
+        qs('conv_out').innerText = `Converted ${amount} INTEN → ${toSym}: ${outAmount} (rate=${rate ?? 'n/a'})`;
+        return;
+      }
+    }
+
+    // 3) fallback /price?from=INTEN&to=SYM&amount=A
+    const endpoint2 = pyBase() + `/price?from=INTEN&to=${encodeURIComponent(toSym)}&amount=${encodeURIComponent(amount)}`;
+    let r2 = await fetch(endpoint2);
+    if (r2.ok) {
+      const j = await r2.json().catch(()=>null);
+      if (j && (j.amount_converted!=null || j.result!=null || j.rate!=null)) {
+        const rate = j.rate ?? (j.result ? j.result/amount : null);
+        const outAmount = j.amount_converted ?? j.result ?? NaN;
+        qs('conv_out').innerText = `Converted ${amount} INTEN → ${toSym}: ${outAmount} (rate=${rate ?? 'n/a'})`;
+        return;
+      }
+    }
+
+    qs('conv_out').innerText = 'Conversion API not available in Python (8083). Start it or add /convert.';
+  }catch(e){
+    qs('conv_out').innerText = 'Error: ' + String(e);
+  }
+}
+
+function swapNotImplemented(){
+  const sym = (qs('swap_to').value || '').toUpperCase();
+  if(!sym){ qs('conv_out').innerText = 'Select target symbol first.'; return; }
+  qs('conv_out').innerText = `Planned on-chain swap to ${sym}. Pending Node endpoint (/api/swap).`;
+}
+
+/* -------- Wire up -------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // botones auth
+  qs('btn_register').onclick = register;
+  qs('btn_login').onclick    = login;
+
+  // botones dashboard
+  qs('btn_balance').onclick       = balance;
+  qs('btn_create_wallet').onclick = createWallet;
+  qs('btn_send').onclick          = transfer;
+  qs('btn_withdraw').onclick      = withdraw;
+  qs('btn_txs').onclick           = loadTxs;
+
+  // conversion
+  hydratePyBaseInput();
+  qs('btn_save_py_base').onclick  = savePyBase;
+  qs('btn_full_amount').onclick   = useFullBalance;
+  qs('btn_convert').onclick       = convertFromWallet;
+  qs('btn_swap').onclick          = swapNotImplemented;
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+0

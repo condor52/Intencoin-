@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>INTEN Wallet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --navy:#001f3f; --ink:#e9eef7; --panel:#0b2a52; --muted:#9fb3d9; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; padding:24px; background:var(--navy); color:var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  h1 { margin: 0 0 12px; font-weight:700; letter-spacing:.5px; }
+  .sub { color:var(--muted); margin-bottom:18px; }
+  .grid {
+    display:grid; gap:16px; grid-template-columns: repeat(12, 1fr);
+  }
+  .card {
+    grid-column: span 12;
+    background:var(--panel); border:1px solid #123d75; border-radius:14px;
+    padding:16px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  }
+  @media(min-width:900px){
+    .span-4{ grid-column: span 4; } .span-6{ grid-column: span 6; } .span-8{ grid-column: span 8; }
+  }
+  label{ display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid #1a4f94; background:#082246; color:var(--ink); outline:none; }
+  input::placeholder{ color:#89a2cf; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button{
+    padding:10px 14px; border:1px solid #1a4f94; background:#0f3a76;
+    color:#fff; border-radius:12px; cursor:pointer; font-weight:600;
+  }
+  button:hover{ filter:brightness(1.1); }
+  pre{
+    width:100%; min-height:48px; background:#061c3a; color:#cfe3ff; border:1px solid #1a4f94;
+    border-radius:12px; padding:12px; overflow:auto;
+  }
+  [data-dashboard]{ display:none; }
+  .pill{ display:inline-block; padding:6px 10px; border-radius:999px; background:#0c3164; color:#cfe3ff; border:1px solid #1a4f94; }
+  .actions{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 0; }
+  .hint{ color:#89a2cf; font-size:12px; margin-top:6px; }
+</style>
+</head>
+<body>
+  <h1>INTEN Wallet</h1>
+  <div class="sub">All actions call the Node server at the same origin (port 3000). Logout button is only inside the Dashboard.</div>
+
+  <div class="grid">
+    <!-- Register -->
+    <section class="card span-4" aria-label="Register">
+      <h3>Register</h3>
+      <label for="r_name">Name</label>
+      <input id="r_name" placeholder="Your name" />
+      <label for="r_email">Email</label>
+      <input id="r_email" placeholder="you@example.com" />
+      <label for="r_pass">Password</label>
+      <input id="r_pass" type="password" placeholder="********" />
+      <div class="actions">
+        <button onclick="register()">Register</button>
+        <span class="pill">POST /auth/register</span>
+      </div>
+      <pre id="r_out"></pre>
+    </section>
+
+    <!-- Login -->
+    <section class="card span-4" aria-label="Login">
+      <h3>Login</h3>
+      <label for="l_email">Email</label>
+      <input id="l_email" placeholder="you@example.com" />
+      <label for="l_pass">Password</label>
+      <input id="l_pass" type="password" placeholder="********" />
+      <div class="actions">
+        <button onclick="login()">Login</button>
+        <span class="pill">POST /auth/login</span>
+      </div>
+      <pre id="l_out"></pre>
+      <div class="hint">After login, the dashboard will appear automatically.</div>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="card span-8" data-dashboard aria-label="Dashboard">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <h3 style="margin:0">Dashboard</h3>
+        <button onclick="logout()">Logout</button>
+      </div>
+
+      <!-- Balance -->
+      <div class="row" style="margin-top:8px;">
+        <button onclick="balance()">Check Balance</button>
+        <span class="pill">GET /api/balance</span>
+      </div>
+      <pre id="bal"></pre>
+
+      <!-- Create Wallet -->
+      <div class="row">
+        <button onclick="createWallet()">Create Wallet</button>
+        <span class="pill">POST /api/wallet/create</span>
+      </div>
+      <pre id="addr"></pre>
+
+      <!-- Transfer (email→email) -->
+      <h4>Transfer</h4>
+      <label for="to_email">Recipient Email</label>
+      <input id="to_email" placeholder="recipient@example.com" />
+      <label for="amt">Amount</label>
+      <input id="amt" placeholder="e.g. 25" />
+      <div class="actions">
+        <button onclick="transfer()">Send</button>
+        <span class="pill">POST /api/transfer</span>
+      </div>
+
+      <!-- Withdraw (to external Python address) -->
+      <h4>Withdraw</h4>
+      <label for="ext">External Address (Python)</label>
+      <input id="ext" placeholder="external-address-uuid" />
+      <label for="wamt">Amount</label>
+      <input id="wamt" placeholder="e.g. 30" />
+      <div class="actions">
+        <button onclick="withdraw()">Withdraw</button>
+        <span class="pill">POST /api/withdraw-request</span>
+      </div>
+
+      <!-- Conversion -->
+      <h4>Convert Balance</h4>
+      <div class="actions">
+        <button onclick="convertTo('USD')">Convert to USD</button>
+        <button onclick="convertTo('EUR')">Convert to EUR</button>
+        <button onclick="convertTo('BTC')">Convert to BTC</button>
+        <button onclick="convertTo('ETH')">Convert to ETH</button>
+        <button onclick="convertTo('DOGE')">Convert to DOGE</button>
+        <button onclick="convertTo('XLM')">Convert to XLM</button>
+        <button onclick="convertTo('AMR')">Convert to AMR</button>
+        <span class="pill">POST /api/convert</span>
+      </div>
+
+      <!-- Transactions -->
+      <h4>Transactions</h4>
+      <div class="actions">
+        <button onclick="tx()">Refresh</button>
+        <span class="pill">GET /api/transactions</span>
+      </div>
+      <pre id="a_out"></pre>
+      <pre id="txs"></pre>
+    </section>
+  </div>
+
+<script>
+/* === INTEN Wallet Frontend Glue === */
+const $ = (id)=>document.getElementById(id);
+
+// Persist token between refreshes
+let TOKEN = localStorage.getItem('INTEN_TOKEN') || null;
+
+// Show/hide dashboard
+function showDashboard(auth) {
+  const dash = document.querySelector('[data-dashboard]');
+  if (!dash) return;
+  dash.style.display = auth ? 'block' : 'none';
+}
+
+// Generic API helper (adds Authorization automatically if TOKEN)
+async function api(path, method='GET', body=null) {
+  const h = {'Content-Type':'application/json'};
+  if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(path, {method, headers:h, body: body ? JSON.stringify(body) : null});
+  const txt = await r.text();
+  let json = {};
+  try { json = JSON.parse(txt); } catch { json = {error:'non-json', status:r.status, text:txt}; }
+  if (!r.ok) throw json;
+  return json;
+}
+
+// Register
+async function register(){
+  try{
+    const out = await api('/auth/register','POST',{
+      name: $('#r_name').value.trim(),
+      email: $('#r_email').value.trim(),
+      password: $('#r_pass').value
+    });
+    $('#r_out').innerText = JSON.stringify(out,null,2);
+    if (out.token) {
+      TOKEN = out.token;
+      localStorage.setItem('INTEN_TOKEN', TOKEN);
+      showDashboard(true);
+      await balance();
+    }
+  }catch(err){ $('#r_out').innerText = JSON.stringify(err,null,2); }
+}
+
+// Login
+async function login(){
+  try{
+    const out = await api('/auth/login','POST',{
+      email: $('#l_email').value.trim(),
+      password: $('#l_pass').value
+    });
+    $('#l_out').innerText = JSON.stringify(out,null,2);
+    if (out.token) {
+      TOKEN = out.token;
+      localStorage.setItem('INTEN_TOKEN', TOKEN);
+      showDashboard(true);
+      await balance(); // refresh immediately
+    }
+  }catch(err){ $('#l_out').innerText = JSON.stringify(err,null,2); }
+}
+
+// Logout (only inside Dashboard)
+function logout(){
+  TOKEN = null;
+  localStorage.removeItem('INTEN_TOKEN');
+  showDashboard(false);
+  $('#bal').innerText = '';
+  $('#addr').innerText = '';
+  $('#a_out').innerText = '';
+  $('#txs').innerText = '';
+}
+
+// Balance (GET /api/balance)
+async function balance(){
+  try{
+    const out = await api('/api/balance','GET');
+    $('#bal').innerText = JSON.stringify(out,null,2);
+  }catch(err){ $('#bal').innerText = JSON.stringify(err,null,2); }
+}
+
+// Create Wallet/Address (POST /api/wallet/create)
+async function createWallet(){
+  try{
+    const out = await api('/api/wallet/create','POST',{});
+    $('#addr').innerText = JSON.stringify(out,null,2);
+  }catch(err){ $('#addr').innerText = JSON.stringify(err,null,2); }
+}
+
+// Transfer by email (POST /api/transfer {toEmail, amount})
+async function transfer(){
+  try{
+    const toEmail = $('#to_email').value.trim();
+    const amount = parseFloat($('#amt').value||'0');
+    const out = await api('/api/transfer','POST',{ toEmail, amount });
+    $('#a_out').innerText = JSON.stringify(out,null,2);
+    await balance();
+  }catch(err){ $('#a_out').innerText = JSON.stringify(err,null,2); }
+}
+
+// Withdraw to external address (Python) (POST /api/withdraw-request)
+async function withdraw(){
+  try{
+    const external_address = $('#ext').value.trim();
+    const amount = parseFloat($('#wamt').value||'0');
+    const out = await api('/api/withdraw-request','POST',{ external_address, amount });
+    $('#a_out').innerText = JSON.stringify(out,null,2);
+    await balance();
+  }catch(err){ $('#a_out').innerText = JSON.stringify(err,null,2); }
+}
+
+// Transactions (GET /api/transactions)
+async function tx(){
+  try{
+    const out = await api('/api/transactions','GET');
+    $('#txs').innerText = JSON.stringify(out,null,2);
+  }catch(err){ $('#txs').innerText = JSON.stringify(err,null,2); }
+}
+
+// Currency conversion (POST /api/convert {to})
+async function convertTo(sym){
+  try{
+    const out = await api('/api/convert','POST',{ to: sym });
+    $('#a_out').innerText = JSON.stringify(out,null,2);
+  }catch(err){ $('#a_out').innerText = JSON.stringify(err,null,2); }
+}
+
+// On load: show/hide dashboard based on token
+document.addEventListener('DOMContentLoaded', ()=>{
+  showDashboard(!!TOKEN);
+});
+</script>
+</body>
+</html>

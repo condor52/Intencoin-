@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INTEN Wallet (HTML_TEMPLATE_XHR)</title>
+<style>
+  :root { --bg:#001f3f; --panel:#02284f; --ink:#e6f1ff; --muted:#a9c1dd; --ok:#0b5; --act:#0bd; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Arial;background:var(--bg);color:var(--ink)}
+  header{padding:14px 18px;border-bottom:1px solid #033355}
+  main{max-width:940px;margin:16px auto;padding:0 14px}
+  .card{background:var(--panel);border:1px solid #033a66;border-radius:14px;padding:14px;margin:12px 0}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  input,button{padding:10px;border-radius:10px;border:1px solid #04406f;background:#012a4a;color:var(--ink)}
+  button{cursor:pointer}
+  .btn{background:var(--act);border:none;color:#012;font-weight:700}
+  .btn2{background:var(--ok);border:none;color:#012;font-weight:700}
+  pre{white-space:pre-wrap;background:#012642;border-radius:10px;padding:10px;color:#d8ecff}
+  .muted{color:var(--muted)}
+  [data-dashboard]{display:none}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0">INTEN Wallet — XHR Template</h1>
+  <div class="muted">Marker: HTML_OK_123</div>
+</header>
+
+<main>
+  <section id="public-area" class="card">
+    <h2>Register</h2>
+    <div class="grid2">
+      <input id="r_name" placeholder="Name (optional)">
+      <input id="r_email" placeholder="Email">
+      <input id="r_pass" type="password" placeholder="Password">
+      <button class="btn" onclick="doRegister()">Register</button>
+    </div>
+    <pre id="r_out" class="muted"></pre>
+
+    <h2>Login</h2>
+    <div class="grid2">
+      <input id="l_email" placeholder="Email">
+      <input id="l_pass" type="password" placeholder="Password">
+      <button class="btn2" onclick="doLogin()">Login</button>
+    </div>
+    <pre id="l_out" class="muted"></pre>
+  </section>
+
+  <section data-dashboard class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Dashboard</h2>
+      <button onclick="doLogout()">Logout</button>
+    </div>
+
+    <h3>Account</h3>
+    <div class="row">
+      <button class="btn2" onclick="doBalance()">Check Balance</button>
+      <button class="btn2" onclick="doCreateWallet()">Create Wallet</button>
+      <button class="btn2" onclick="doTxs()">Transactions</button>
+    </div>
+    <pre id="bal"></pre>
+    <pre id="addr"></pre>
+
+    <h3>Transfer (by email)</h3>
+    <div class="grid2">
+      <input id="to_email" placeholder="Recipient email">
+      <input id="amt" placeholder="Amount">
+      <button class="btn" onclick="doTransfer()">Transfer</button>
+    </div>
+
+    <h3>Withdraw (external)</h3>
+    <div class="grid2">
+      <input id="ext" placeholder="External address">
+      <input id="wamt" placeholder="Amount">
+      <button class="btn" onclick="doWithdraw()">Withdraw</button>
+    </div>
+
+    <h3>Transactions</h3>
+    <pre id="txs"></pre>
+
+    <h3>Action output</h3>
+    <pre id="a_out"></pre>
+  </section>
+</main>
+
+<script>
+// ===== Helpers XHR =====
+function xhr(method, path, body, cb){
+  try{
+    var x=new XMLHttpRequest();
+    x.open(method, path, true);
+    x.setRequestHeader('Content-Type','application/json');
+    if(window.INTEN_TOKEN){ x.setRequestHeader('Authorization','Bearer '+window.INTEN_TOKEN); }
+    x.onreadystatechange=function(){
+      if(x.readyState===4){
+        var txt=x.responseText||'';
+        var json=null;
+        try{ json = JSON.parse(txt); }catch(e){ json={error:'non-json',status:x.status,text:txt}; }
+        cb(x.status, json);
+      }
+    };
+    x.send(body ? JSON.stringify(body) : null);
+  }catch(e){
+    cb(0, {error:'xhr-failed', message:String(e)});
+  }
+}
+
+function show(elId, data){ document.getElementById(elId).innerText = typeof data==='string' ? data : JSON.stringify(data,null,2); }
+function showDashboard(auth){
+  document.querySelector('[data-dashboard]').style.display = auth ? 'block' : 'none';
+  document.getElementById('public-area').style.display = auth ? 'none' : 'block';
+}
+
+// ===== Token persistente =====
+(function(){
+  var t=localStorage.getItem('INTEN_TOKEN');
+  window.INTEN_TOKEN = t ? t : null;
+  showDashboard(!!window.INTEN_TOKEN);
+})();
+
+// ===== Actions =====
+function doRegister(){
+  var body={ name:document.getElementById('r_name').value, email:document.getElementById('r_email').value, password:document.getElementById('r_pass').value };
+  xhr('POST','/auth/register', body, function(status, out){
+    show('r_out', out);
+    if(out && out.token){ window.INTEN_TOKEN=out.token; localStorage.setItem('INTEN_TOKEN', out.token); showDashboard(true); doBalance(); }
+  });
+}
+function doLogin(){
+  var body={ email:document.getElementById('l_email').value, password:document.getElementById('l_pass').value };
+  xhr('POST','/auth/login', body, function(status, out){
+    show('l_out', out);
+    if(out && out.token){ window.INTEN_TOKEN=out.token; localStorage.setItem('INTEN_TOKEN', out.token); showDashboard(true); doBalance(); }
+  });
+}
+function doLogout(){
+  window.INTEN_TOKEN=null; localStorage.removeItem('INTEN_TOKEN');
+  document.getElementById('bal').innerText=''; document.getElementById('addr').innerText=''; document.getElementById('txs').innerText=''; document.getElementById('a_out').innerText='';
+  showDashboard(false);
+}
+
+function doBalance(){ xhr('GET','/api/balance', null, function(s,out){ show('bal', out); }); }
+function doCreateWallet(){ xhr('POST','/api/wallet/create', {}, function(s,out){ show('addr', out); }); }
+function doTxs(){ xhr('GET','/api/transactions', null, function(s,out){ show('txs', out); }); }
+function doTransfer(){
+  var body={ toEmail:(document.getElementById('to_email').value||'').trim(), amount: parseFloat(document.getElementById('amt').value||'0') };
+  xhr('POST','/api/transfer', body, function(s,out){ show('a_out', out); doBalance(); });
+}
+function doWithdraw(){
+  var body={ external_address:(document.getElementById('ext').value||'').trim(), amount: parseFloat(document.getElementById('wamt').value||'0') };
+  xhr('POST','/api/withdraw-request', body, function(s,out){ show('a_out', out); doBalance(); });
+}
+</script>
+</body>
+</html>

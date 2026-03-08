@@ -1,0 +1,134 @@
+// db.js — Adaptador simple sobre sql.js (sin compilación nativa)
+const fs = require('fs');
+const path = require('path');
+const initSqlJs = require('sql.js');
+
+const DB_FILE = process.env.DATABASE_FILE || './db.sqlite';
+let SQL = null;
+let db = null;
+
+// Carga / crea DB desde disco
+async function loadDb() {
+  if (!SQL) SQL = await initSqlJs();
+  if (fs.existsSync(DB_FILE)) {
+    const filebuffer = fs.readFileSync(DB_FILE);
+    db = new SQL.Database(new Uint8Array(filebuffer));
+  } else {
+    db = new SQL.Database();
+  }
+
+  // Migraciones (tablas)
+  exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE,
+      name TEXT,
+      password_hash TEXT,
+      account_no TEXT,
+      balance REAL DEFAULT 0,
+      created_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS wallets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      account_index INTEGER,
+      deposit_address TEXT,
+      created_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS transactions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      type TEXT,
+      amount REAL,
+      balance_after REAL,
+      note TEXT,
+      created_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS withdrawals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      amount REAL,
+      external_address TEXT,
+      status TEXT,
+      tx_hash TEXT,
+      created_at INTEGER,
+      completed_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS chain_addresses (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      chain TEXT,
+      account_index INTEGER,
+      address TEXT,
+      created_at INTEGER
+    );
+  `);
+  persist();
+}
+
+function persist() {
+  const data = db.export();
+  fs.writeFileSync(DB_FILE, Buffer.from(data));
+}
+
+// Ejecuta múltiples statements (sin resultados)
+function exec(sql) {
+  db.run(sql);
+}
+
+// Emula prepare().get()/all()/run() que tu server.js ya usa
+function prepare(sql) {
+  return {
+    run: (...params) => {
+      const stmt = db.prepare(sql);
+      stmt.bind(params);
+      while (stmt.step()) { /* consume */ }
+      stmt.free();
+      persist();
+      return { changes: 1 };
+    },
+    get: (...params) => {
+      const stmt = db.prepare(sql);
+      stmt.bind(params);
+      const row = stmt.step() ? rowObject(stmt) : undefined;
+      stmt.free();
+      return row;
+    },
+    all: (...params) => {
+      const stmt = db.prepare(sql);
+      stmt.bind(params);
+      const rows = [];
+      while (stmt.step()) rows.push(rowObject(stmt));
+      stmt.free();
+      return rows;
+    }
+  };
+}
+
+function rowObject(stmt) {
+  const cols = stmt.getColumnNames();
+  const vals = stmt.get();
+  const o = {};
+  cols.forEach((c, i) => o[c] = vals[i]);
+  return o;
+}
+
+// Inicializa al cargar este módulo (sin await en require)
+// Server llamará a getDbReady() antes de arrancar.
+let _ready = null;
+function getDbReady() {
+  if (!_ready) _ready = loadDb();
+  return _ready;
+}
+
+module.exports = {
+  prepare,
+  exec,
+  getDbReady
+};
+
+
+
+
+0
+

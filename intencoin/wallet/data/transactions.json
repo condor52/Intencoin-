@@ -1,0 +1,422 @@
+[
+  {
+    "id": "30bc4187-cbd0-4319-bd45-e1c9a3f8c70d",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 3000,
+    "balance_after": 3000,
+    "note": "bridge deposit from Python",
+    "created_at": 1761948096533
+  },
+  {
+    "id": "7ece7043-44a9-4c03-8e3c-0c444afb8e58",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 3000,
+    "balance_after": 6000,
+    "note": "top-up",
+    "created_at": 1761948164138
+  },
+  {
+    "id": "f39e3a22-7598-44c0-8e80-2b95a02947da",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 3000,
+    "balance_after": 9000,
+    "note": "bridge deposit from Python",
+    "created_at": 1761949290008
+  },
+  {
+    "id": "95591fb6-c73a-459c-8edc-0bf290693608",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "transfer_out",
+    "amount": -150,
+    "balance_after": 8850,
+    "note": "to 1Hk1oq85TuuNwUKiicywgsFnc3KdDDkzSX - test move",
+    "created_at": 1761949304652
+  },
+  {
+    "id": "6e35efcf-b488-4f92-bc35-7f78a4cd2811",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "transfer_in",
+    "amount": 150,
+    "balance_after": 9150,
+    "note": "from 1G1Ei3pNC8iNsXcM9r7o13zdwN67RtCJ5z - test move",
+    "created_at": 1761949304652
+  },
+  {
+    "id": "75f61f5b-968d-49f3-b9fc-d83adbe05dcc",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -500,
+    "balance_after": 8650,
+    "note": "to EXT_DEST_XYZ - bridge out",
+    "created_at": 1761949319713
+  },
+  {
+    "id": "4f6ad0e0-bf69-4b1c-a03c-ca8df58a25f0",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 3000,
+    "balance_after": 3000,
+    "note": "top-up",
+    "created_at": 1761959507207
+  },
+  {
+    "id": "d586f1e5-0957-41d2-9a5b-0afbe4af3652",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 2000,
+    "balance_after": 5000,
+    "note": "Transfer from Python to Node",
+    "created_at": 1761963111188
+  },
+  {
+    "id": "c401358a-b28d-420c-9126-a48e92060c81",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 2000,
+    "balance_after": 7000,
+    "note": "Transfer from Python to Node",
+    "created_at": 1761963327602
+  },
+  {
+    "id": "0ee10f16-2577-45ca-a4fb-b476ff0a7a3c",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -1000,
+    "balance_after": 6000,
+    "note": "to external - Transfer from Node to Python wallet",
+    "created_at": 1761966587202
+  },
+  {
+    "id": "fb0d45f1-4ae3-4a1d-9d24-d279d75bc804",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -123,
+    "balance_after": 5877,
+    "note": "to 54ac73e2-2e8c-4948-b078-c577bb2e0d96 - Node->Python 123 exacto",
+    "created_at": 1761966939890
+  },
+  {
+    "id": "39169fa0-5dd1-404d-a0df-974e1c15beda",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -23,
+    "balance_after": 5854,
+    "note": "to 54ac73e2-2e8c-4948-b078-c577bb2e0d96 - Node->Python 23",
+    "created_at": 1761967242374
+  },
+  {
+    "id": "3117ca60-ef84-4df7-94b0-2cfee7d9871a",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 123,
+    "balance_after": 5977,
+    "note": "test in",
+    "created_at": 1761968758877
+  },
+  {
+    "id": "c46f0e2c-8cea-42a1-97bf-965831862278",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -1000,
+    "balance_after": 4977,
+    "note": "to 54ac73e2-2e8c-4948-b078-c577bb2e0d96 - Node->Python",
+    "created_at": 1761968807324
+  },
+  {
+    "id": "cb7ad95e-a11e-46e6-8cf5-54439f317758",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -500,
+    "balance_after": 4477,
+    "note": "to 54ac73e2-2e8c-4948-b078-c577bb2e0d96 - Node->Python test 500",
+    "created_at": 1761968942334
+  },
+  {
+    "id": "9f080872-243e-4dc1-8b46-b38974c8302e",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 200,
+    "balance_after": 4677,
+    "note": "from Python",
+    "created_at": 1761968985886
+  },
+  {
+    "id": "431c9ff7-55e1-4049-a825-878845f22a35",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "deposit",
+    "amount": 333,
+    "balance_after": 5010,
+    "note": "from Python",
+    "created_at": 1761969174489
+  },
+  {
+    "id": "7c28ec45-6859-4588-8a52-b37dfa0e223d",
+    "user_id": "1d1bde58-0ced-4f45-befc-3f2ffa9c4145",
+    "type": "withdraw",
+    "amount": -222,
+    "balance_after": 4788,
+    "note": "to 54ac73e2-2e8c-4948-b078-c577bb2e0d96 - Node->Python test",
+    "created_at": 1761969198705
+  },
+  {
+    "id": "a6d26d8a-1e50-4133-bf5f-974be9ed5576",
+    "user_id": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "type": "deposit",
+    "amount": 2000,
+    "balance_after": 2000,
+    "note": "top-up",
+    "created_at": 1762043544459
+  },
+  {
+    "id": "d28a6734-b1c3-40ed-b006-bc8e3d2c6617",
+    "type": "transfer",
+    "from_address": "8760a8429a6d45389595fbcbc0112128",
+    "to_address": "73e755ba5b2f4cb89115012e114c51c9",
+    "from_user": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "to_user": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "amount": 500,
+    "from_balance_after": 1500,
+    "to_balance_after": 500,
+    "note": "internal transfer",
+    "created_at": 1762043877599
+  },
+  {
+    "id": "bb59c448-2c08-4b93-9558-b57467899803",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -100,
+    "balance_after": 400,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762044487061
+  },
+  {
+    "id": "0408e397-0864-4fb0-a333-5ccb78826f44",
+    "type": "transfer",
+    "from_address": "8760a8429a6d45389595fbcbc0112128",
+    "to_address": "50f12f3a0f2440f0836c6be8d88d645c",
+    "from_user": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "to_user": "260b378e-b118-4297-9e60-edb1e9b38292",
+    "amount": 150,
+    "from_balance_after": 1350,
+    "to_balance_after": 150,
+    "note": "UI test",
+    "created_at": 1762110527993
+  },
+  {
+    "id": "f3c8230d-31e7-4212-b5bd-c037495b8860",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 375,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110742729
+  },
+  {
+    "id": "8269ad77-2c35-4fcd-94f5-14a4f83fb9a6",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 350,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110748308
+  },
+  {
+    "id": "21b8d664-456c-43a8-8d5c-1ae673e16d66",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 325,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110750442
+  },
+  {
+    "id": "aa68ce35-8366-47c7-99f5-d77a1ca4fe4f",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 300,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110751082
+  },
+  {
+    "id": "62e0920c-22f6-4e69-ac5c-9a36c2add795",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 275,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110751521
+  },
+  {
+    "id": "a24a5cb1-7e53-4cf8-9931-45c02ea5340a",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -25,
+    "balance_after": 250,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110813391
+  },
+  {
+    "id": "6b80df60-b88c-4b96-85ca-4011fa431fa6",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -10,
+    "balance_after": 240,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110858742
+  },
+  {
+    "id": "25945961-cc5e-4128-ac04-68ff1cb5887d",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -10,
+    "balance_after": 230,
+    "note": "to 8760a8429a6d45389595fbcbc0112128",
+    "created_at": 1762110904364
+  },
+  {
+    "id": "100e11ea-ff96-47d2-bdcf-3dce4f02e57c",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "transfer_out",
+    "amount": -20,
+    "balance_after": 210,
+    "note": "to goviukac@gmail.com",
+    "created_at": 1762111103057
+  },
+  {
+    "id": "c2666c0f-f8ff-4171-83a9-d3e19fa20d9b",
+    "type": "transfer_in",
+    "amount": 20,
+    "balance_after": 4808,
+    "note": "from skyynet38@gmail.com",
+    "created_at": 1762111103057
+  },
+  {
+    "id": "8811d1f2-fe8f-4fd6-ae78-1cdc87fa682e",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -20,
+    "balance_after": 190,
+    "note": "to 5c347e7d-2af6-4ace-8469-a010",
+    "created_at": 1762114225156
+  },
+  {
+    "id": "f4c1e8e2-8385-4fd8-9564-19ae9a80b9a0",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "transfer_out",
+    "amount": -20,
+    "balance_after": 170,
+    "note": "to goviukac@gmail.com",
+    "created_at": 1762115166790
+  },
+  {
+    "id": "5cec9b48-b1f6-4b09-98b9-76fa13c67a37",
+    "type": "transfer_in",
+    "amount": 20,
+    "balance_after": 4828,
+    "note": "from skyynet38@gmail.com",
+    "created_at": 1762115166790
+  },
+  {
+    "id": "7d3771c7-6033-4423-8081-82f616892690",
+    "user_id": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "type": "withdraw_req",
+    "amount": -30,
+    "balance_after": 1320,
+    "note": "to 5c347e7d-2af6-4ace-8469-a010a2eadaf4",
+    "created_at": 1762116478955
+  },
+  {
+    "id": "f51f1a41-6651-46ca-9bd3-31bd53704885",
+    "user_id": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "type": "transfer_out",
+    "amount": -150,
+    "balance_after": 1170,
+    "note": "to luis@yhhhh.com",
+    "created_at": 1762117397218
+  },
+  {
+    "id": "0540c413-f2ca-4406-87cd-9fa314ac5005",
+    "user_id": "260b378e-b118-4297-9e60-edb1e9b38292",
+    "type": "transfer_in",
+    "amount": 150,
+    "balance_after": 300,
+    "note": "from sender@example.com",
+    "created_at": 1762117397218
+  },
+  {
+    "id": "b5cbdb85-b0e4-481a-92c9-179a0bd19b9e",
+    "user_id": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "type": "withdraw_req",
+    "amount": -30,
+    "balance_after": 1140,
+    "note": "to 5c347e7d-2af6-4ace-8469-a010a2eadaf4",
+    "created_at": 1762117429395
+  },
+  {
+    "id": "570d8ae3-b94d-488f-9a13-a54029a4d344",
+    "type": "transfer",
+    "from_address": "8760a8429a6d45389595fbcbc0112128",
+    "to_address": "50f12f3a0f2440f0836c6be8d88d645c",
+    "from_user": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "to_user": "260b378e-b118-4297-9e60-edb1e9b38292",
+    "amount": 150,
+    "from_balance_after": 990,
+    "to_balance_after": 450,
+    "note": "manual test",
+    "created_at": 1762118522249
+  },
+  {
+    "id": "39ccfd5c-1ce3-48bd-bb56-7c8b8b657906",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "transfer_out",
+    "amount": -10,
+    "balance_after": 160,
+    "note": "to goviukac@gmail.com",
+    "created_at": 1762118585623
+  },
+  {
+    "id": "69195fb8-a8bc-4ccc-b2b0-8c5f4fa25926",
+    "type": "transfer_in",
+    "amount": 10,
+    "balance_after": 4838,
+    "note": "from skyynet38@gmail.com",
+    "created_at": 1762118585623
+  },
+  {
+    "id": "d0881b80-105a-4e44-9545-9c31466f772f",
+    "type": "transfer",
+    "from_address": "8760a8429a6d45389595fbcbc0112128",
+    "to_address": "73e755ba5b2f4cb89115012e114c51c9",
+    "from_user": "303af25f-4f61-4ac5-8dfb-71dab717df92",
+    "to_user": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "amount": 100,
+    "from_balance_after": 890,
+    "to_balance_after": 260,
+    "note": "transferencia interna",
+    "created_at": 1762118750030
+  },
+  {
+    "id": "b1056e6b-9ecc-48c8-9b7f-257ca5df7552",
+    "user_id": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "type": "withdraw_req",
+    "amount": -30,
+    "balance_after": 230,
+    "note": "to 5c347e7d-2af6-4ace-8469-a01",
+    "created_at": 1762118972456
+  },
+  {
+    "id": "948ff935-4f40-4c85-95c2-cf97c9c4ca33",
+    "type": "transfer",
+    "from_user": "ed007c0a-3f4a-40c7-b843-4faba1973ba6",
+    "to_user": "072d8160-3f30-4f2c-a22b-4f0ef28030d4",
+    "amount": 25,
+    "from_balance_after": 205,
+    "to_balance_after": 25,
+    "note": "email transfer",
+    "created_at": 1762128412341
+  }
+]

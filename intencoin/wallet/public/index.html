@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>INTENCOIN — Wallet & API Portal</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:920px}
+    h1{margin-bottom:8px}
+    .card{border:1px solid #ddd;border-radius:14px;padding:16px;margin:12px 0}
+    label{display:block;font-weight:600;margin:8px 0 4px}
+    input,button{padding:10px;border-radius:10px;border:1px solid #ccc;width:100%;box-sizing:border-box}
+    button{margin-top:8px;cursor:pointer}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    pre{background:#fafafa;border:1px solid #eee;padding:12px;border-radius:10px;overflow:auto}
+    small{color:#666}
+  </style>
+</head>
+<body>
+  <h1>INTENCOIN — Wallet &amp; API Portal</h1>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Address (Node)</label>
+        <input id="addr" placeholder="Pega aquí la dirección de depósito del Node">
+      </div>
+      <div>
+        <label>Monto</label>
+        <input id="amt" type="number" step="1" min="0" value="1000">
+      </div>
+    </div>
+    <label>Nota</label>
+    <input id="note" placeholder="nota opcional" value="top-up">
+    <div class="row">
+      <button onclick="checkBalance()">Ver balance público</button>
+      <button onclick="deposit()">Depositar vía webhook</button>
+    </div>
+    <small>El webhook usa el header <code>x-deposit-secret</code>. Debe coincidir con el secreto del servidor.</small>
+  </div>
+
+  <div class="card">
+    <h3>Resultado</h3>
+    <pre id="out">{}</pre>
+  </div>
+
+<script>
+const BASE = location.origin; // ej. http://127.0.0.1:3000
+
+async function checkBalance(){
+  const addr = document.getElementById('addr').value.trim();
+  if(!addr){ return print({error:'address requerido'}); }
+  try{
+    const r = await fetch(`${BASE}/public/balance?address=${encodeURIComponent(addr)}`);
+    const j = await r.json();
+    print(j);
+  }catch(e){ print({error:String(e)}); }
+}
+
+async function deposit(){
+  const addr = document.getElementById('addr').value.trim();
+  const amt  = Number(document.getElementById('amt').value || 0);
+  const note = document.getElementById('note').value || '';
+  if(!addr || amt<=0){ return print({error:'address y amount requeridos'}); }
+  try{
+    const r = await fetch(`${BASE}/public/deposit`, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-deposit-secret':'letmein'
+      },
+      body: JSON.stringify({address:addr, amount:amt, note})
+    });
+    const j = await r.json();
+    print(j);
+  }catch(e){ print({error:String(e)}); }
+}
+
+function print(obj){
+  document.getElementById('out').textContent = JSON.stringify(obj, null, 2);
+}
+</script>
+</body>
+</html>

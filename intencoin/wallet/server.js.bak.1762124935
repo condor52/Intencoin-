@@ -1,0 +1,391 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const { randomUUID } = require('crypto');
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* ====== Archivos de datos ====== */
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS = path.join(DATA_DIR, 'users.json');
+const ADDRS = path.join(DATA_DIR, 'addresses.json');
+const TXS   = path.join(DATA_DIR, 'transactions.json');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(USERS)) fs.writeFileSync(USERS, '{}');
+if (!fs.existsSync(ADDRS)) fs.writeFileSync(ADDRS, '{}');
+if (!fs.existsSync(TXS))   fs.writeFileSync(TXS, '[]');
+
+function loadJSON(p, fallback) {
+  try { return JSON.parse(fs.readFileSync(p, 'utf8') || ''); } catch { return fallback; }
+}
+function saveJSON(p, obj){ fs.writeFileSync(p, JSON.stringify(obj, null, 2)); }
+
+/* ====== Config ====== */
+const PORT = process.env.PORT || 3000;
+const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+const PYTHON_RECEIVE_URL = process.env.PYTHON_RECEIVE_URL || 'http://127.0.0.1:8083/public_receive';
+
+/* ====== Auth mínima con tokens en memoria ====== */
+global.__TOKENS = global.__TOKENS || {}; // token -> uid
+
+app.post('/auth/register', (req, res) => {
+  try {
+    const { name, email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ error: 'params' });
+
+    const users = loadJSON(USERS, {});
+    for (const k of Object.keys(users)) {
+      const u = users[k] || {};
+      if ((u.email || '').toLowerCase() === String(email).toLowerCase()) {
+        return res.status(409).json({ error: 'email exists' });
+      }
+    }
+    const uid = randomUUID();
+    const account_no = 'INTEN-' + uid.split('-')[0].toUpperCase();
+    const address = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0,32);
+
+    users[uid] = { uid, name: name||'', email, password, balance: 0, account_no, address };
+    saveJSON(USERS, users);
+
+    const amap = loadJSON(ADDRS, {});
+    amap[address] = uid;
+    saveJSON(ADDRS, amap);
+
+    const token = randomUUID();
+    __TOKENS[token] = uid;
+
+    return res.json({ ok: true, token, user: { uid, email, account_no, address } });
+  } catch (e) {
+    console.error('/auth/register', e);
+    return res.status(500).json({ error: 'server' });
+  }
+});
+
+app.post('/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ error: 'params' });
+    const users = loadJSON(USERS, {});
+    let uid = null, u = null;
+    for (const k of Object.keys(users)) {
+      const cand = users[k] || {};
+      if ((cand.email||'').toLowerCase() === String(email).toLowerCase() && cand.password === password) {
+        uid = k; u = cand; break;
+      }
+    }
+    if (!uid) return res.status(401).json({ error: 'invalid' });
+
+    const token = randomUUID();
+    __TOKENS[token] = uid;
+    return res.json({ ok: true, token, user: { uid, email: u.email, account_no: u.account_no, address: u.address } });
+  } catch (e) {
+    console.error('/auth/login', e);
+    return res.status(500).json({ error: 'server' });
+  }
+});
+
+/* ====== Middleware auth ====== */
+function auth(req, res, next){
+  try{
+    const h = String(req.headers.authorization||'');
+    const token = h.startsWith('Bearer ') ? h.slice(7) : null;
+    if (!token || !__TOKENS[token]) return res.status(401).json({ error: 'unauthorized' });
+    req.uid = __TOKENS[token];
+    next();
+  }catch(e){ return res.status(401).json({ error: 'unauthorized' }); }
+}
+
+/* ====== API privadas para la UI ====== */
+app.get('/api/balance', auth, (req,res)=>{
+  const users = loadJSON(USERS, {});
+  const u = users[req.uid];
+  if (!u) return res.status(404).json({ error: 'user' });
+  return res.json({ ok:true, balance: Number(u.balance||0), account_no: u.account_no, address: u.address });
+});
+
+app.post('/api/wallet/create', auth, (req,res)=>{
+  const users = loadJSON(USERS, {});
+  const amap  = loadJSON(ADDRS, {});
+  const u = users[req.uid];
+  if (!u) return res.status(404).json({ error:'user' });
+  if (!u.address){
+    const address = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0,32);
+    u.address = address; amap[address] = req.uid; saveJSON(ADDRS, amap); saveJSON(USERS, users);
+  }
+  return res.json({ ok:true, address: u.address, account_no: u.account_no });
+});
+
+app.post('/api/transfer', auth, (req,res)=>{
+  try{
+    const { toEmail, amount, note } = req.body || {};
+    const a = Number(amount||0);
+    if (!toEmail || !(a>0)) return res.status(400).json({ error:'params' });
+
+    const users = loadJSON(USERS, {});
+    const from = users[req.uid]; if (!from) return res.status(404).json({ error:'from' });
+
+    let to_uid=null, to=null;
+    for (const k of Object.keys(users)) {
+      const cand = users[k] || {};
+      if ((cand.email||'').toLowerCase() === String(toEmail).toLowerCase()) { to_uid=k; to=cand; break; }
+    }
+    if (!to_uid) return res.status(404).json({ error:'to_not_found' });
+    if (Number(from.balance||0) < a) return res.status(400).json({ error:'insufficient' });
+
+    from.balance = +(Number(from.balance||0)-a).toFixed(6);
+    to.balance   = +(Number(to.balance||0)+a).toFixed(6);
+    saveJSON(USERS, users);
+
+    const txs = loadJSON(TXS, []);
+    const id = randomUUID(), now=Date.now();
+    txs.push({ id, type:'transfer', from_user:req.uid, to_user:to_uid, amount:a,
+               from_balance_after:from.balance, to_balance_after:to.balance, note: note||'email transfer', created_at: now });
+    saveJSON(TXS, txs);
+
+    return res.json({ ok:true, tx_id:id });
+  }catch(e){
+    console.error('/api/transfer', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+app.post('/api/withdraw-request', auth, async (req,res)=>{
+  try{
+    const { external_address, amount, note } = req.body || {};
+    const a = Number(amount||0);
+    if (!external_address || !(a>0)) return res.status(400).json({ error:'params' });
+
+    const users = loadJSON(USERS, {});
+    const u = users[req.uid]; if (!u) return res.status(404).json({ error:'user' });
+    if (Number(u.balance||0) < a) return res.status(400).json({ error:'insufficient' });
+
+    u.balance = +(Number(u.balance||0)-a).toFixed(6);
+    saveJSON(USERS, users);
+
+    const txs = loadJSON(TXS, []);
+    const id = randomUUID(), now=Date.now();
+    txs.push({ id, user_id:req.uid, type:'withdraw_req', amount:-a, balance_after:u.balance,
+               note: `to ${external_address.slice(0,32)}`, created_at: now });
+    saveJSON(TXS, txs);
+
+    // forward al Python (best effort)
+    try{
+      const fetch = (await import('node-fetch')).default;
+      const r = await fetch(PYTHON_RECEIVE_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ address: external_address, amount: a, note: note || 'from Node' })
+      });
+      const t = await r.text();
+      console.log('[withdraw forward] status', r.status, t);
+    }catch(e){ console.error('[withdraw forward] error', e); }
+
+    return res.json({ ok:true, balance: u.balance });
+  }catch(e){
+    console.error('/api/withdraw-request', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+/* ====== Endpoints públicos estilo puente ====== */
+app.get('/public/balance', (req,res)=>{
+  const address = String(req.query.address||'').trim();
+  if (!address) return res.status(400).json({ error:'address missing' });
+  const users = loadJSON(USERS, {}); const amap = loadJSON(ADDRS, {});
+  const uid = amap[address]; if (!uid || !users[uid]) return res.status(404).json({ error:'address not found' });
+  const u = users[uid];
+  return res.json({ address, account_no: u.account_no, balance: Number(u.balance||0) });
+});
+
+app.post('/public/register_address', (req,res)=>{
+  try{
+    const { user_id, account_no, email, address } = req.body || {};
+    if (!user_id || !address) return res.status(400).json({ error:'params' });
+    const users = loadJSON(USERS, {}); const amap = loadJSON(ADDRS, {});
+    if (!users[user_id]) users[user_id] = { uid:user_id, email: email||'', account_no: account_no||('INTEN-'+user_id.split('-')[0].toUpperCase()), balance: 0 };
+    users[user_id].address = address; amap[address] = user_id;
+    saveJSON(USERS, users); saveJSON(ADDRS, amap);
+    return res.json({ ok:true, user_id, address, account_no: users[user_id].account_no, balance: Number(users[user_id].balance||0) });
+  }catch(e){
+    console.error('/public/register_address', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+app.post('/public/deposit', (req,res)=>{
+  try{
+    const secret = String(req.headers['x-deposit-secret']||'');
+    if (secret !== DEPOSIT_SECRET) return res.status(403).json({ error:'forbidden' });
+    const { address, amount, note } = req.body || {};
+    const a = Number(amount||0); if (!address || !(a>0)) return res.status(400).json({ error:'params' });
+
+    const users = loadJSON(USERS, {}); const amap = loadJSON(ADDRS, {});
+    const uid = amap[address]; if (!uid || !users[uid]) return res.status(404).json({ error:'address not found' });
+    const u = users[uid]; u.balance = +(Number(u.balance||0)+a).toFixed(6);
+    saveJSON(USERS, users);
+
+    const txs = loadJSON(TXS, []); const id = randomUUID(), now=Date.now();
+    txs.push({ id, user_id: uid, type:'deposit', amount:a, balance_after:u.balance, note: note||'deposit', created_at: now });
+    saveJSON(TXS, txs);
+
+    return res.json({ ok:true, address, balance:u.balance, tx_id:id });
+  }catch(e){
+    console.error('/public/deposit', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+app.post('/public/withdraw', async (req,res)=>{
+  try{
+    const secret = String(req.headers['x-deposit-secret']||'');
+    if (secret !== DEPOSIT_SECRET) return res.status(403).json({ error:'forbidden' });
+    const { address, amount, to, note } = req.body || {};
+    const a = Number(amount||0); if (!address || !(a>0)) return res.status(400).json({ error:'params' });
+
+    const users = loadJSON(USERS, {}); const amap = loadJSON(ADDRS, {});
+    const uid = amap[address]; if (!uid || !users[uid]) return res.status(404).json({ error:'address not found' });
+    const u = users[uid]; if (Number(u.balance||0) < a) return res.status(400).json({ error:'insufficient' });
+    u.balance = +(Number(u.balance||0)-a).toFixed(6);
+    saveJSON(USERS, users);
+
+    const txs = loadJSON(TXS, []); const id = randomUUID(), now=Date.now();
+    txs.push({ id, user_id: uid, type:'withdraw', amount:-a, balance_after:u.balance, note:`to ${to||'external'}${note?' - '+note:''}`, created_at: now });
+    saveJSON(TXS, txs);
+
+    try{
+      const fetch = (await import('node-fetch')).default;
+      const r = await fetch(PYTHON_RECEIVE_URL, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ address: to, amount: a, note: note || 'from Node' })
+      });
+      const t = await r.text();
+      console.log('[WITHDRAW] node->py', r.status, t);
+    }catch(e){ console.error('[WITHDRAW] node->py ERROR', e); }
+
+    return res.json({ ok:true, address, balance:u.balance, tx_id:id });
+  }catch(e){
+    console.error('/public/withdraw', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+app.post('/public/transfer_address', (req,res)=>{
+  try{
+    const { from, to, amount, note } = req.body || {};
+    const a = Number(amount||0);
+    if (!from || !to || !(a>0)) return res.status(400).json({ error:'params' });
+    if (from === to) return res.status(400).json({ error:'same_address' });
+
+    const users = loadJSON(USERS, {}); const amap = loadJSON(ADDRS, {});
+    const from_uid = amap[from]; const to_uid = amap[to];
+    if (!from_uid || !users[from_uid]) return res.status(404).json({ error:'from_not_found' });
+    if (!to_uid   || !users[to_uid])   return res.status(404).json({ error:'to_not_found'   });
+
+    const uFrom = users[from_uid], uTo = users[to_uid];
+    if (Number(uFrom.balance||0) < a) return res.status(400).json({ error:'insufficient' });
+
+    uFrom.balance = +(Number(uFrom.balance||0)-a).toFixed(6);
+    uTo.balance   = +(Number(uTo.balance||0)+a).toFixed(6);
+    saveJSON(USERS, users);
+
+    const txs = loadJSON(TXS, []); const id = randomUUID(), now=Date.now();
+    txs.push({ id, type:'transfer', from_address:from, to_address:to, from_user:from_uid, to_user:to_uid,
+               amount:a, from_balance_after:uFrom.balance, to_balance_after:uTo.balance,
+               note: note||'internal transfer', created_at: now });
+    saveJSON(TXS, txs);
+
+    return res.json({ ok:true, tx_id:id, from:{address:from,balance:uFrom.balance}, to:{address:to,balance:uTo.balance} });
+  }catch(e){
+    console.error('/public/transfer_address', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+/* ====== Conversión (placeholder local; Python real vendrá luego) ====== */
+/* ====== Static + index ====== */
+app.use(express.static(path.join(__dirname, 'static')));
+app.get('/', (req,res)=> res.sendFile(path.join(__dirname, 'static', 'index.html')));
+
+/* ====== Listen ====== */
+app.listen(PORT, ()=> console.log('INTEN Wallet listening on', PORT));
+
+// === GET /api/transactions (token) ===
+app.get('/api/transactions', auth, (req, res) => {
+  try {
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const uid  = req.user.uid;
+    const addr = req.user.address;
+
+    const items = txs.filter(t =>
+      t.user_id === uid ||
+      t.from_user === uid || t.to_user === uid ||
+      t.from_address === addr || t.to_address === addr
+    );
+
+    return res.json({ ok: true, items });
+  } catch (e) {
+    console.error('/api/transactions error:', e);
+    return res.status(500).json({ error: 'server' });
+  }
+});
+
+// === POST /api/convert (token) ===
+// Convierte TODO tu balance INTEN a la moneda destino (USD, EUR, BTC, ETH, DOGE, XLM, AMR)
+const INTEN_RATES = { USD:1.25, EUR:1.10, BTC:0.00002, ETH:0.0003, DOGE:2.0, XLM:10, AMR:1.0 };
+
+app.post('/api/convert', auth, (req, res) => {
+  try {
+    const to = ((req.body && req.body.to) || '').toString().trim().toUpperCase();
+    if (!to || !INTEN_RATES[to]) {
+      return res.status(400).json({ error: 'unsupported', detail: `to=${to}` });
+    }
+    // Lee balance real del usuario desde USERS
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const u = users[req.user.uid] || {};
+    const bal = Number(u.balance || 0);
+    const rate = INTEN_RATES[to];
+    const amount_converted = +(bal * rate).toFixed(8);
+
+    return res.json({ ok: true, from: 'INTEN', to, balance: bal, rate, amount_converted });
+  } catch (e) {
+    console.error('/api/convert error:', e);
+    return res.status(500).json({ error: 'server' });
+  }
+
+
+
+
+const PYTHON_BASE = process.env.PYTHON_BASE || 'http://127.0.0.1:8080';
+
+app.post('/api/convert', auth, async (req, res) => {
+  try {
+    const { to } = req.body || {};
+    if (!to) return res.status(400).json({ error:'params', detail:'to required' });
+
+    // Usa la address del usuario autenticado (para convertir TODO el balance)
+    const users = loadJSON(USERS, {});
+    const u = users[req.user.uid];
+    if (!u || !u.address) return res.status(401).json({ error:'unauthorized' });
+
+    const r = await fetch(`${PYTHON_BASE}/convert`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ to, address: u.address })
+    });
+    const j = await r.json().catch(()=>null);
+    if (!r.ok) return res.status(r.status).json(j || {error:'python'});
+    return res.json(j);
+  } catch (e) {
+    console.error('[convert proxy] error', e);
+    return res.status(500).json({ error:'server' });
+  }
+});
+
+
+
+
+
+0

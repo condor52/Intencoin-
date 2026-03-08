@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>INTEN Wallet</title>
+<style>
+body {
+  background: #001f3f;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+button { padding: 8px 14px; margin-top: 5px; cursor: pointer; }
+input { padding: 6px; width: 260px; margin: 3px; border-radius:4px; border:none; }
+.panel { border:1px solid #335; padding:15px; margin:15px 0; border-radius:5px; background:#002952; }
+[data-dashboard] { display:none; }
+pre { background:#000; padding:10px; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<h1>INTEN Wallet</h1>
+
+<div class="panel">
+<h2>Register</h2>
+<input id="r_name" placeholder="Name"><br>
+<input id="r_email" placeholder="Email"><br>
+<input id="r_pass" type="password" placeholder="Password"><br>
+<button onclick="register()">Register</button>
+<pre id="r_out"></pre>
+</div>
+
+<div class="panel">
+<h2>Login</h2>
+<input id="l_email" placeholder="Email"><br>
+<input id="l_pass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+<pre id="l_out"></pre>
+</div>
+
+<div class="panel" data-dashboard>
+<h2>Dashboard</h2>
+<button onclick="logout()">Logout</button><br><br>
+
+<button onclick="balance()">Check Balance</button>
+<pre id="bal"></pre>
+
+<button onclick="createWallet()">Create Wallet</button>
+<pre id="addr"></pre>
+
+<h3>Transfer</h3>
+<input id="to_email" placeholder="Recipient Email"><br>
+<input id="amt" placeholder="Amount"><br>
+<button onclick="transfer()">Send</button>
+
+<h3>Withdraw</h3>
+<input id="ext" placeholder="External Address"><br>
+<input id="wamt" placeholder="Amount"><br>
+<button onclick="withdraw()">Withdraw</button>
+
+<h3>Transactions</h3>
+<button onclick="tx()">View Transactions</button>
+<pre id="txs"></pre>
+
+<h3>Convert Currency</h3>
+<button onclick="convertTo('USD')">Convert to USD</button>
+<button onclick="convertTo('EUR')">Convert to EUR</button>
+<button onclick="convertTo('BTC')">Convert to BTC</button>
+<pre id="a_out"></pre>
+
+</div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+let TOKEN = localStorage.getItem('INTEN_TOKEN') || null;
+
+function showDashboard(auth){
+ document.querySelector('[data-dashboard]').style.display = auth ? 'block' : 'none';
+}
+
+async function api(path, method='GET', body=null){
+ const h={'Content-Type':'application/json'};
+ if(TOKEN) h['Authorization']='Bearer '+TOKEN;
+ const r=await fetch(path,{method,headers:h,body:body?JSON.stringify(body):null});
+ const t=await r.text();
+ let j={}; try{j=JSON.parse(t)}catch{j={error:'non-json',raw:t}};
+ if(!r.ok) throw j; return j;
+}
+
+async function register(){
+ try{
+   const out=await api('/auth/register','POST',{name:$('#r_name').value,email:$('#r_email').value,password:$('#r_pass').value});
+   $('#r_out').innerText=JSON.stringify(out,null,2);
+ }catch(e){$('#r_out').innerText=JSON.stringify(e,null,2);}
+}
+
+async function login(){
+ try{
+   const out=await api('/auth/login','POST',{email:$('#l_email').value,password:$('#l_pass').value});
+   TOKEN=out.token; localStorage.setItem('INTEN_TOKEN',TOKEN); showDashboard(true); await balance();
+ }catch(e){$('#l_out').innerText=JSON.stringify(e,null,2);}
+}
+
+function logout(){
+ TOKEN=null; localStorage.removeItem('INTEN_TOKEN'); showDashboard(false);
+}
+
+async function balance(){
+ try{ $('#bal').innerText=JSON.stringify(await api('/api/balance'),null,2); }
+ catch(e){ $('#bal').innerText=JSON.stringify(e,null,2); }
+}
+
+async function createWallet(){
+ try{ $('#addr').innerText=JSON.stringify(await api('/api/wallet/create','POST',{}),null,2); }
+ catch(e){ $('#addr').innerText=JSON.stringify(e,null,2); }
+}
+
+async function transfer(){
+ try{
+   $('#a_out').innerText=JSON.stringify(await api('/api/transfer','POST',{toEmail:$('#to_email').value,amount:parseFloat($('#amt').value)}),null,2);
+   await balance();
+ }catch(e){ $('#a_out').innerText=JSON.stringify(e,null,2); }
+}
+
+async function withdraw(){
+ try{
+   $('#a_out').innerText=JSON.stringify(await api('/api/withdraw-request','POST',{external_address:$('#ext').value,amount:parseFloat($('#wamt').value)}),null,2);
+   await balance();
+ }catch(e){ $('#a_out').innerText=JSON.stringify(e,null,2); }
+}
+
+async function tx(){ try{$('#txs').innerText=JSON.stringify(await api('/api/transactions'),null,2);}catch(e){$('#txs').innerText=JSON.stringify(e,null,2);} }
+
+async function convertTo(sym){
+ try{ $('#a_out').innerText=JSON.stringify(await api('/api/convert','POST',{to:sym}),null,2); }
+ catch(e){ $('#a_out').innerText=JSON.stringify(e,null,2); }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ showDashboard(!!TOKEN); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INTENCOIN CRYPTOCURRENCY</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{font-family:system-ui,Segoe UI,Arial;margin:0;background:#0f1220;color:#fff}
+  header{display:flex;gap:16px;align-items:center;padding:16px 20px;background:#141834;border-bottom:1px solid #222757}
+  .logo{width:64px;height:64px;border:2px dashed #2f3560;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9aa0d0}
+  main{max-width:980px;margin:20px auto;padding:0 16px}
+  .card{background:#151a38;border:1px solid #232a61;border-radius:14px;padding:16px;margin:12px 0}
+  input,button{padding:10px;border-radius:10px;border:1px solid #2a3369;background:#0f1330;color:#eaf0ff}
+  button{cursor:pointer}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .muted{color:#9aa0d0}
+  .btnbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .hidden{display:none}
+  code{background:#0f1330;padding:2px 6px;border-radius:6px;border:1px solid #2a3369}
+</style>
+</head>
+<body>
+<header>
+  <img src="/static/logo.png" class="logo" alt="LOGO">
+  <div>
+    <div style="font-size:20px;font-weight:700">INTENCOIN CRYPTOCURRENCY</div>
+    <div class="muted">Wallet & API portal</div>
+  </div>
+</header>
+<main>
+
+  <!-- AUTH -->
+  <div class="card" id="auth_box">
+    <h3>Register</h3>
+    <div class="row">
+      <input id="r_name" placeholder="Name (optional)">
+      <input id="r_email" placeholder="Email">
+      <input id="r_pass" type="password" placeholder="Password">
+      <button id="btn_register">Create</button>
+    </div>
+    <div id="r_out" class="muted"></div>
+
+    <h3 style="margin-top:18px">Login</h3>
+    <div class="row">
+      <input id="l_email" placeholder="Email">
+      <input id="l_pass" type="password" placeholder="Password">
+      <button id="btn_login">Sign in</button>
+    </div>
+    <div id="l_out" class="muted"></div>
+  </div>
+
+  <!-- DASHBOARD (solo visible después de login) -->
+  <div class="card hidden" id="dash">
+    <h3>Dashboard</h3>
+
+    <!-- Receive (muestra address vinculada) -->
+    <div class="row">
+      <button id="btn_receive">Receive</button>
+      <span id="addr" class="muted"></span>
+    </div>
+
+    <!-- Balance -->
+    <div class="row" style="margin-top:8px">
+      <button id="btn_balance">Balance</button>
+      <span id="bal" class="muted"></span>
+    </div>
+
+    <!-- Send to user email -->
+    <div class="row" style="margin-top:8px">
+      <input id="to_email" placeholder="Send to (email)">
+      <input id="amt" placeholder="Amount">
+      <button id="btn_send">Send</button>
+    </div>
+
+    <!-- Withdraw (to external address) -->
+    <div class="row" style="margin-top:8px">
+      <input id="ext" placeholder="External address">
+      <input id="wamt" placeholder="Amount">
+      <button id="btn_withdraw">Withdraw</button>
+    </div>
+
+    <!-- Currency Conversion (auto-amount = full balance) -->
+    <div class="row" style="margin-top:14px">
+      <div>
+        <div class="muted" style="margin-bottom:6px">Convert full balance from INTEN to:</div>
+        <div class="btnbar">
+          <button class="btncv" data-sym="BTC">BTC</button>
+          <button class="btncv" data-sym="ETH">ETH</button>
+          <button class="btncv" data-sym="DOGE">DOGE</button>
+          <button class="btncv" data-sym="XLM">XLM</button>
+          <button class="btncv" data-sym="USD">USD</button>
+          <button class="btncv" data-sym="EUR">EUR</button>
+          <button class="btncv" data-sym="DGD">DGD</button>
+          <button class="btncv" data-sym="DEN">DEN</button>
+          <button class="btncv" data-sym="AMR">AMR</button>
+        </div>
+      </div>
+    </div>
+    <div id="conv_out" class="muted" style="margin-top:6px"></div>
+
+    <!-- Tx list -->
+    <div class="row" style="margin-top:12px">
+      <button id="btn_txs">Refresh transactions</button>
+    </div>
+    <pre id="txs" style="white-space:pre-wrap;font-size:13px;margin-top:6px"></pre>
+  </div>
+
+</main>
+
+<script>
+let TOKEN = null;
+let MY_ADDRESS = null; // se llena al recibir o crear dirección
+
+async function api(p, m="GET", b=null){
+  const h = {"Content-Type":"application/json"};
+  if (TOKEN) h["Authorization"] = "Bearer " + TOKEN;
+  const r = await fetch(p, { method:m, headers:h, body: b ? JSON.stringify(b) : null });
+  const tx = await r.text();
+  try { return JSON.parse(tx); } catch { return { error:'non-json', status:r.status, text:tx }; }
+}
+
+function show(el, yes){ el.classList[yes?'remove':'add']('hidden'); }
+
+// === AUTH (usa tus endpoints existentes; si no, muestra dashboard igual) ===
+async function register(){
+  const out = await api('/auth/register','POST',{
+    name: document.getElementById('r_name').value,
+    email: document.getElementById('r_email').value,
+    password: document.getElementById('r_pass').value
+  });
+  document.getElementById('r_out').innerText = JSON.stringify(out);
+  if (out && out.token) {
+    TOKEN = out.token;
+    afterLogin(out.user);
+  }
+}
+async function login(){
+  const out = await api('/auth/login','POST',{
+    email: document.getElementById('l_email').value,
+    password: document.getElementById('l_pass').value
+  });
+  document.getElementById('l_out').innerText = JSON.stringify(out);
+  if (out && out.token) {
+    TOKEN = out.token;
+    afterLogin(out.user);
+  } else {
+    // si no hay auth backend, dejar entrar al dashboard para pruebas
+    show(document.getElementById('auth_box'), false);
+    show(document.getElementById('dash'), true);
+  }
+}
+function afterLogin(user){
+  show(document.getElementById('auth_box'), false);
+  show(document.getElementById('dash'), true);
+}
+
+// === DASH ===
+async function receiveAddress(){
+  // Primero intenta leer si ya está registrada (si tu backend devuelve address en /api/wallet/create, úsalo)
+  // Si no, prueba tu mapeo existente vía /public/register_address (pero aquí solo la mostramos si ya existe)
+  // Para UX simple: si MY_ADDRESS está en localStorage, úsalo
+  const cached = localStorage.getItem('my_address');
+  if (cached) {
+    MY_ADDRESS = cached;
+    document.getElementById('addr').innerText = MY_ADDRESS;
+    return;
+  }
+  // Si no hay cache, pide al backend de wallet crear o devolver address del usuario autenticado, si existe ese endpoint:
+  const out = await api('/api/wallet/create','POST',{});
+  if (out && out.address) {
+    MY_ADDRESS = out.address;
+    localStorage.setItem('my_address', MY_ADDRESS);
+    document.getElementById('addr').innerText = MY_ADDRESS;
+    return;
+  }
+  // Fallback: muestra aviso
+  document.getElementById('addr').innerText = 'No address yet. Register it first.';
+}
+async function getBalance(){
+  // Lee balance por address registrada (usa endpoint público)
+  const addr = MY_ADDRESS || localStorage.getItem('my_address');
+  if (!addr) { document.getElementById('bal').innerText = 'No address set'; return; }
+  const r = await fetch(`/public/balance?address=${encodeURIComponent(addr)}`);
+  const j = await r.json().catch(()=> ({}));
+  document.getElementById('bal').innerText = JSON.stringify(j);
+}
+async function sendInter(){
+  const toEmail = document.getElementById('to_email').value.trim();
+  const amount  = parseFloat(document.getElementById('amt').value||'0');
+  const out = await api('/api/transfer','POST',{ toEmail, amount });
+  document.getElementById('l_out').innerText = JSON.stringify(out);
+}
+async function withdraw(){
+  const external_address = document.getElementById('ext').value.trim();
+  const amount = parseFloat(document.getElementById('wamt').value||'0');
+  const out = await api('/api/withdraw-request','POST',{ external_address, amount });
+  document.getElementById('l_out').innerText = JSON.stringify(out);
+}
+async function loadTxs(){
+  const out = await api('/api/transactions','GET',null);
+  document.getElementById('txs').innerText = JSON.stringify(out,null,2);
+}
+
+// === Conversion: usa TODO el balance vía /api/convert (sin pedir cantidad) ===
+async function convertFull(toSym){
+  try{
+    // Asegura address
+    const addr = MY_ADDRESS || localStorage.getItem('my_address');
+    if (!addr) { document.getElementById('conv_out').innerText = 'No address set'; return; }
+
+    const out = await api('/api/convert','POST',{ address: addr, to: toSym });
+    if (out && out.ok) {
+      document.getElementById('conv_out').innerText =
+        `Converted ${out.amount_in} INTEN → ${toSym}: ${out.amount_out} (rate=${out.rate ?? 'n/a'})`;
+    } else {
+      document.getElementById('conv_out').innerText = JSON.stringify(out);
+    }
+  } catch(e){
+    document.getElementById('conv_out').innerText = 'Error: ' + String(e);
+  }
+}
+
+// Wire up
+document.getElementById('btn_register').onclick = register;
+document.getElementById('btn_login').onclick    = login;
+document.getElementById('btn_receive').onclick  = receiveAddress;
+document.getElementById('btn_balance').onclick  = getBalance;
+document.getElementById('btn_send').onclick     = sendInter;
+document.getElementById('btn_withdraw').onclick = withdraw;
+document.getElementById('btn_txs').onclick      = loadTxs;
+document.querySelectorAll('.btncv').forEach(b=>{
+  b.addEventListener('click', ()=> convertFull(b.dataset.sym));
+});
+
+// Si ya había address guardada, muéstrala al abrir dashboard
+const cached = localStorage.getItem('my_address');
+if (cached) { MY_ADDRESS = cached; }
+</script>
+</body>
+</html>

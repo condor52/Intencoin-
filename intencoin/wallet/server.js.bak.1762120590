@@ -1,0 +1,863 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const { randomUUID } = require('crypto');
+
+const app = express();
+const INTEN_RATES = { USD:1.25, EUR:1.10, BTC:0.00002, ETH:0.0003, DOGE:2.0, XLM:10, AMR:1.0 };
+    const em = (email||'').toLowerCase().trim();
+    if(!em || !password) return res.status(400).json({error:'email/password required'});
+
+    const users = readJSON(USERS, {});
+    // no duplicados por email
+    for(const u of Object.values(users)){
+      if((u.email||'').toLowerCase()===em) return res.status(409).json({error:'email exists'});
+    }
+    const uid = randomUUID();
+    const address = genAddress();
+    const account_no = ensureAccountNo(uid);
+
+    users[uid] = { uid, name, email: em, password, balance: 0, account_no, address };
+    writeJSON(USERS, users);
+
+    const amap = readJSON(ADDRS, {});
+    amap[address] = uid;
+    writeJSON(ADDRS, amap);
+
+    const token = randomUUID();
+    tokens.set(token, uid);
+
+    return res.json({ ok:true, token, user:{ uid, name, email:em, account_no, address } });
+  }catch(e){ console.error('/auth/register', e); return res.status(500).json({error:'server'}); }
+});
+
+app.post('/auth/login', (req,res)=>{
+  try{
+    const {email='', password=''} = req.body||{};
+    const em = (email||'').toLowerCase().trim();
+    const users = readJSON(USERS, {});
+    const entry = Object.values(users).find(u=> (u.email||'').toLowerCase()===em && u.password===password);
+    if(!entry) return res.status(401).json({error:'invalid credentials'});
+
+    const token = randomUUID();
+    tokens.set(token, entry.uid);
+    return res.json({ ok:true, token, user:{ uid:entry.uid, name:entry.name, email:entry.email, account_no:entry.account_no, address: entry.address } });
+  }catch(e){ console.error('/auth/login', e); return res.status(500).json({error:'server'}); }
+});
+
+// ===== auth middleware =====
+function auth(req,res,next){
+  try{
+    const h = req.headers['authorization']||'';
+    const m = h.match(/^Bearer\s+(.+)$/i);
+    if(!m) return res.status(401).json({error:'no token'});
+    const token = m[1];
+    const uid = tokens.get(token);
+    if(!uid) return res.status(401).json({error:'invalid token'});
+    req.uid = uid;
+    next();
+  }catch(e){ return res.status(401).json({error:'auth'}); }
+}
+
+// ===== API (privadas para HTML) =====
+
+// Balance del usuario autenticado (de users.json)
+app.get('/api/balance', auth, (req,res)=>{
+  const users = readJSON(USERS, {});
+  const u = users[req.uid];
+  if(!u) return res.status(404).json({error:'user'});
+  return res.json({ ok:true, balance: Number(u.balance||0), account_no: u.account_no, address: u.address });
+});
+
+// Crear/asegurar wallet/dirección propia (si ya hay, la devuelve)
+app.post('/api/wallet/create', auth, (req,res)=>{
+  const users = readJSON(USERS, {});
+  const amap = readJSON(ADDRS, {});
+  const u = users[req.uid];
+  if(!u) return res.status(404).json({error:'user'});
+  if(!u.address){
+    u.address = genAddress();
+    amap[u.address] = req.uid;
+  }
+  if(!u.account_no) u.account_no = ensureAccountNo(req.uid);
+  writeJSON(USERS, users);
+  writeJSON(ADDRS, amap);
+  return res.json({ ok:true, address: u.address, account_no: u.account_no });
+});
+
+// Transferencia interna por email (lógico, dentro del Node)
+app.post('/api/transfer', auth, (req,res)=>{
+  const { toEmail='', amount } = req.body||{};
+  const a = Number(amount||0);
+  if(!toEmail || !(a>0)) return res.status(400).json({error:'params'});
+  const users = readJSON(USERS, {});
+  const from = users[req.uid];
+  if(!from) return res.status(404).json({error:'user'});
+  const to = Object.values(users).find(u=> (u.email||'').toLowerCase().trim() === toEmail.toLowerCase().trim());
+  if(!to) return res.status(404).json({error:'dest'});
+  if(Number(from.balance||0) < a) return res.status(400).json({error:'insufficient'});
+
+  from.balance = +(Number(from.balance||0) - a).toFixed(6);
+  to.balance   = +(Number(to.balance||0) + a).toFixed(6);
+
+  const txs = readJSON(TXS, []);
+  const now = Date.now();
+  txs.push({ id: randomUUID(), user_id: req.uid, type:'transfer_out', amount:-a, balance_after: from.balance, note:`to ${to.email}`, created_at: now });
+  txs.push({ id: randomUUID(), user_id: to.uid,  type:'transfer_in',  amount:+a, balance_after: to.balance,   note:`from ${from.email}`, created_at: now });
+
+  writeJSON(USERS, users);
+  writeJSON(TXS, txs);
+  return res.json({ ok:true, from_balance: from.balance });
+});
+
+// Solicitud de retiro a dirección externa (solo registra intención; tu webhook real es /public/withdraw)
+// Listar transacciones del usuario
+app.get('/api/transactions', auth, (req,res)=>{
+  const txs = readJSON(TXS, []);
+  return res.json({ ok:true, items: txs.filter(t=>t.user_id===req.uid).sort((a,b)=>b.created_at-a.created_at).slice(0,200) });
+});
+
+// ===== Servidor =====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, ()=> console.log('INTEN Wallet listening on', PORT));
+
+// === PUBLIC API (balance & register_address) – safe append ===
+try {
+  const _DATA_DIR = (typeof DATA_DIR!=='undefined') ? DATA_DIR : path.join(__dirname,'data');
+  const _USERS    = (typeof USERS!=='undefined')    ? USERS    : path.join(_DATA_DIR,'users.json');
+  const _ADDRS    = (typeof ADDRS!=='undefined')    ? ADDRS    : path.join(_DATA_DIR,'addresses.json');
+
+  // Crea archivos si faltan
+  if (!fs.existsSync(_DATA_DIR)) fs.mkdirSync(_DATA_DIR, {recursive:true});
+  if (!fs.existsSync(_USERS)) fs.writeFileSync(_USERS, '{}');
+  if (!fs.existsSync(_ADDRS)) fs.writeFileSync(_ADDRS, '{}');
+
+  // GET /public/balance?address=ADDR
+  if (!app._router || !app._router.stack.some(x => x.route && x.route.path==='/public/balance')) {
+    app.get('/public/balance', (req,res)=>{
+      try{
+        const address = (req.query.address||'').toString().trim();
+        if (!address) return res.status(400).json({error:'address missing'});
+
+        const users = JSON.parse(fs.readFileSync(_USERS,'utf8')||'{}');
+        const amap  = JSON.parse(fs.readFileSync(_ADDRS,'utf8')||'{}');
+        const uid = amap[address];
+        if (!uid || !users[uid]) return res.status(404).json({error:'address not found'});
+
+        const u = users[uid];
+        return res.json({ address, account_no: u.account_no || uid, balance: Number(u.balance||0) });
+      } catch(e){ console.error('public/balance error:', e); return res.status(500).json({error:'server'}); }
+    });
+  }
+
+  // POST /public/register_address  {user_id, email, account_no, address}
+  if (!app._router || !app._router.stack.some(x => x.route && x.route.path==='/public/register_address')) {
+    app.post('/public/register_address', (req,res)=>{
+      try{
+        const { user_id, email, account_no, address } = req.body || {};
+        if (!user_id || !address) return res.status(400).json({error:'params'});
+
+        const users = JSON.parse(fs.readFileSync(_USERS,'utf8')||'{}');
+        const amap  = JSON.parse(fs.readFileSync(_ADDRS,'utf8')||'{}');
+
+        if (!users[user_id]) users[user_id] = { uid:user_id, email:email||null, account_no:account_no||user_id, balance: Number(users[user_id]?.balance||0) };
+        amap[address] = user_id;
+
+        fs.writeFileSync(_USERS, JSON.stringify(users,null,2));
+        fs.writeFileSync(_ADDRS, JSON.stringify(amap,null,2));
+
+        return res.json({ ok:true, user_id, address, account_no: users[user_id].account_no, balance: Number(users[user_id].balance||0) });
+      } catch(e){ console.error('public/register_address error:', e); return res.status(500).json({error:'server'}); }
+    });
+  }
+} catch(e){ console.error('PUBLIC API append failed:', e); }
+// === END PUBLIC API ===
+
+// 3) deposit webhook (público, requiere x-deposit-secret)
+app.post('/public/deposit', (req, res) => {
+  try {
+    const secretHeader = (req.headers['x-deposit-secret'] || '').toString();
+    const DEPOSIT_SECRET = process.env.DEPOSIT_SHARED_SECRET || process.env.DEPOSIT_SECRET || 'letmein';
+    if (secretHeader !== DEPOSIT_SECRET) return res.status(403).json({ error: 'forbidden' });
+
+    const { address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!address || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const fs = require('fs');
+    const path = require('path');
+    const { randomUUID } = require('crypto');
+
+    const DATA_DIR = path.join(__dirname, 'data');
+    const USERS = path.join(DATA_DIR, 'users.json');
+    const ADDRS = path.join(DATA_DIR, 'addresses.json');
+    const TXS   = path.join(DATA_DIR, 'transactions.json');
+
+    if (!fs.existsSync(USERS) || !fs.existsSync(ADDRS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(ADDRS, 'utf8') || '{}');
+
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const u = users[uid];
+    const newBalance = Number(u.balance || 0) + a;
+    u.balance = newBalance;
+
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+    txs.push({ id, user_id: uid, type: 'deposit', amount: a, balance_after: newBalance, note: note || 'deposit', created_at: now });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    return res.json({ ok: true, address, balance: newBalance, tx_id: id });
+  } catch (e) {
+    console.error('public/deposit error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// === Transferir de address -> address (interno) ===
+app.post('/public/transfer_address', (req, res) => {
+  try {
+    const { from, to, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!from || !to || !(a > 0)) {
+      return res.status(400).json({ error: 'params' });
+    }
+    if (from === to) {
+      return res.status(400).json({ error: 'same_address' });
+    }
+
+    // Cargar stores
+    if (!fs.existsSync(USERS) || !fs.existsSync(ADDRS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(ADDRS, 'utf8') || '{}');
+
+    const from_uid = amap[from];
+    const to_uid   = amap[to];
+
+    if (!from_uid || !users[from_uid]) return res.status(404).json({ error: 'from_not_found' });
+    if (!to_uid   || !users[to_uid])   return res.status(404).json({ error: 'to_not_found'   });
+
+    const uFrom = users[from_uid];
+    const uTo   = users[to_uid];
+
+    const balFrom = Number(uFrom.balance || 0);
+    if (balFrom < a) return res.status(400).json({ error: 'insufficient' });
+
+    const newFrom = +(balFrom - a).toFixed(6);
+    const newTo   = +(Number(uTo.balance || 0) + a).toFixed(6);
+
+    uFrom.balance = newFrom;
+    uTo.balance   = newTo;
+
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    // Registrar transacción
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id  = randomUUID();
+    const now = Date.now();
+    txs.push({
+      id,
+      type: 'transfer',
+      from_address: from,
+      to_address: to,
+      from_user: from_uid,
+      to_user: to_uid,
+      amount: a,
+      from_balance_after: newFrom,
+      to_balance_after: newTo,
+      note: note || 'internal transfer',
+      created_at: now
+    });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    return res.json({
+      ok: true,
+      tx_id: id,
+      from: { address: from, balance: newFrom },
+      to:   { address: to,   balance: newTo   }
+    });
+  } catch (e) {
+    console.error('public/transfer_address error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// ===== Currency Convert API (auto-amount desde balance) =====
+const PYTHON_BASE = process.env.PYTHON_BASE || 'http://127.0.0.1:8083';
+
+app.post('/api/convert_disabled', async (req, res) => {
+  try {
+    const { address, to } = req.body || {};
+    const toSym = (to || '').toString().trim().toUpperCase();
+    if (!address || !toSym) {
+      return res.status(400).json({ error: 'params', detail: 'address and to required' });
+    }
+
+    // Cargar stores
+    const users = fs.existsSync(USERS) ? JSON.parse(fs.readFileSync(USERS,'utf8')||'{}') : {};
+    const amap  = fs.existsSync(ADDRS) ? JSON.parse(fs.readFileSync(ADDRS,'utf8')||'{}') : {};
+    const uid = amap[address];
+    if (!uid || !users[uid]) return res.status(404).json({ error: 'address not found' });
+
+    const bal = Number(users[uid].balance || 0);
+    if (!(bal > 0)) return res.json({ address, to: toSym, amount_in: 0, rate: 0, amount_out: 0 });
+
+    // Llamar a Python /convert
+    const resp = await fetch(`${PYTHON_BASE}/convert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'INTEN', to: toSym, amount: bal })
+    });
+
+    if (!resp.ok) {
+      const tx = await resp.text().catch(()=> '');
+      return res.status(502).json({ error: 'python', status: resp.status, detail: tx });
+    }
+
+    const j = await resp.json().catch(()=> ({}));
+    const rate = j.rate ?? (j.result && bal ? (Number(j.result)/bal) : null);
+    const out  = j.amount_converted ?? j.result ?? null;
+
+    return res.json({
+      ok: true,
+      address,
+      amount_in: bal,
+      to: toSym,
+      rate: rate ?? null,
+      amount_out: out
+    });
+  } catch (e) {
+    console.error('api/convert error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// ====== INTERNAL ADDRESS→ADDRESS TRANSFER (same Node store) ======
+app.post('/public/transfer_address', (req, res) => {
+  try {
+    const { from_address, to_address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!from_address || !to_address || !(a > 0)) {
+      return res.status(400).json({ error: 'params' });
+    }
+    if (from_address === to_address) {
+      return res.status(400).json({ error: 'same_address' });
+    }
+
+    // Cargar stores
+    if (!fs.existsSync(USERS) || !fs.existsSync(ADDRS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(ADDRS, 'utf8') || '{}');
+
+    const from_uid = amap[from_address];
+    const to_uid   = amap[to_address];
+
+    if (!from_uid || !users[from_uid]) return res.status(404).json({ error: 'from not found' });
+    if (!to_uid   || !users[to_uid])   return res.status(404).json({ error: 'to not found' });
+
+    const uf = users[from_uid];
+    const ut = users[to_uid];
+
+    const balFrom = Number(uf.balance || 0);
+    if (balFrom < a) return res.status(400).json({ error: 'insufficient' });
+
+    // Debitar/ acreditar
+    const newFrom = +(balFrom - a).toFixed(6);
+    const newTo   = +(Number(ut.balance || 0) + a).toFixed(6);
+    uf.balance = newFrom;
+    ut.balance = newTo;
+
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    // Registrar transacciones
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const now = Date.now();
+    const id_out = randomUUID();
+    const id_in  = randomUUID();
+
+    txs.push({
+      id: id_out, user_id: from_uid, type: 'transfer_out', amount: -a,
+      balance_after: newFrom, note: `to ${to_address}${note ? ' - ' + note : ''}`, created_at: now
+    });
+    txs.push({
+      id: id_in, user_id: to_uid, type: 'transfer_in', amount: a,
+      balance_after: newTo, note: `from ${from_address}${note ? ' - ' + note : ''}`, created_at: now
+    });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    return res.json({
+      ok: true,
+      amount: a,
+      from: { address: from_address, user_id: from_uid, balance: newFrom, tx_id: id_out },
+      to:   { address: to_address,   user_id: to_uid,   balance: newTo,   tx_id: id_in  }
+    });
+  } catch (e) {
+    console.error('public/transfer_address error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// === Transfer by email (used by UI) ===
+app.post('/api/transfer', requireAuth, (req,res)=>{
+  try{
+    const { toEmail, amount, note } = req.body || {};
+    const a = Number(amount||0);
+    if(!toEmail || !(a>0)) return res.status(400).json({error:'params'});
+
+    if(!fs.existsSync(USERS)) return res.status(500).json({error:'store not ready'});
+    const users = JSON.parse(fs.readFileSync(USERS,'utf8')||'{}');
+
+    const from_uid = req.uid;
+    const uFrom = users[from_uid];
+    if(!uFrom) return res.status(401).json({error:'no_user'});
+
+    // find recipient by email (case-insensitive)
+    const to_uid = Object.keys(users).find(k => String((users[k].email||'')).toLowerCase() === String(toEmail).toLowerCase());
+    if(!to_uid) return res.status(404).json({error:'to_not_found'});
+
+    const uTo = users[to_uid];
+
+    const balFrom = Number(uFrom.balance||0);
+    if(balFrom < a) return res.status(400).json({error:'insufficient'});
+
+    const newFrom = +(balFrom - a).toFixed(6);
+    const newTo   = +((Number(uTo.balance||0) + a)).toFixed(6);
+    uFrom.balance = newFrom;
+    uTo.balance   = newTo;
+
+    fs.writeFileSync(USERS, JSON.stringify(users,null,2));
+
+    // tx log
+    let txs=[]; try{ if(fs.existsSync(TXS)) txs=JSON.parse(fs.readFileSync(TXS,'utf8')||'[]'); }catch{}
+    const id=randomUUID(), now=Date.now();
+    txs.push({id,type:'transfer_email',from_user:from_uid,to_user:to_uid,amount:a,from_balance_after:newFrom,to_balance_after:newTo,note:note||('to '+toEmail),created_at:now});
+    fs.writeFileSync(TXS, JSON.stringify(txs,null,2));
+
+    return res.json({ok:true,tx_id:id,from:{balance:newFrom},to:{email:toEmail,balance:newTo}});
+  }catch(e){
+    console.error('api/transfer error:',e);
+    return res.status(500).json({error:'server',detail:String(e)});
+  }
+});
+
+// === Withdraw request from UI (forwards to /public/withdraw) ===
+// === Convert balance to target currency via Python ===
+app.post('/api/convert_disabled', requireAuth, async (req,res)=>{
+  try{
+    const { to, amount } = req.body || {};
+    const toSym = (to||'').toString().trim().toUpperCase();
+    if(!toSym) return res.status(400).json({error:'params',detail:'to required'});
+
+    if(!fs.existsSync(USERS)) return res.status(500).json({error:'store not ready'});
+    const users = JSON.parse(fs.readFileSync(USERS,'utf8')||'{}');
+    const u = users[req.uid]; if(!u) return res.status(401).json({error:'no_user'});
+
+    const baseAmount = Number.isFinite(Number(amount)) && Number(amount)>0 ? Number(amount) : Number(u.balance||0);
+    if(!(baseAmount>0)) return res.status(400).json({error:'no_balance'});
+
+    const PYTHON_BASE = process.env.PYTHON_BASE || 'http://127.0.0.1:8083';
+    // Prefer /convert; fallback a /price
+    let j=null, resp;
+    try{
+      resp = await fetch(`${PYTHON_BASE}/convert`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({from:'INTEN', to: toSym, amount: baseAmount})
+      });
+      if(resp.ok) j = await resp.json().catch(()=>null);
+    }catch{}
+
+    if(!j){
+      try{
+        resp = await fetch(`${PYTHON_BASE}/price?from=INTEN&to=${encodeURIComponent(toSym)}&amount=${encodeURIComponent(baseAmount)}`);
+        if(resp.ok) j = await resp.json().catch(()=>null);
+      }catch{}
+    }
+
+    if(!j) return res.status(502).json({error:'python',detail:'no response from python convert/price'});
+
+    const rate = j.rate ?? (j.result ? j.result/baseAmount : null);
+    const outAmount = j.amount_converted ?? j.result ?? null;
+
+    return res.json({ok:true, from:'INTEN', to:toSym, amount_in: baseAmount, amount_out: outAmount, rate});
+  }catch(e){
+    console.error('api/convert error:', e);
+    return res.status(500).json({error:'server',detail:String(e)});
+  }
+});
+
+// ===== /api/convert (usa token -> usuario -> address y balance completo) =====
+const TOKS = path.join(DATA_DIR, 'tokens.json'); // mapa { token: user_id }
+
+app.post('/api/convert', async (req, res) => {
+  try {
+    const ah = (req.headers['authorization'] || '').toString();
+    const token = ah.replace(/^Bearer\s+/i, '').trim();
+    if (!token) return res.status(401).json({ error: 'no_token' });
+
+    // Cargar tokens y usuarios
+    if (!fs.existsSync(TOKS) || !fs.existsSync(USERS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+    const tmap  = JSON.parse(fs.readFileSync(TOKS, 'utf8') || '{}');
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+
+    const uid = tmap[token];
+    if (!uid || !users[uid]) return res.status(401).json({ error: 'bad_token' });
+
+    const u = users[uid];
+    const fromAddress = u.address || u.deposit_address || '';
+    const balance = Number(u.balance || 0);
+
+    const toSym = ((req.body && req.body.to) || '').toString().trim().toUpperCase();
+    if (!toSym) return res.status(400).json({ error: 'params', detail: 'to required' });
+    if (!fromAddress) return res.status(400).json({ error: 'no_address_on_user' });
+    if (!(balance > 0)) return res.status(400).json({ error: 'no_balance' });
+
+    // Llama a Python: intenta /convert y fallback /price
+    const PYTHON_BASE = process.env.PYTHON_BASE || 'http://127.0.0.1:8083';
+    const payload = { from: 'INTEN', to: toSym, amount: balance };
+
+    let ok = false, out = null;
+
+    try {
+      const r1 = await fetch(`${PYTHON_BASE}/convert`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (r1.ok) {
+        out = await r1.json().catch(()=>null);
+        ok = !!out;
+      }
+    } catch (e) {
+      // sigue a fallback
+    }
+
+    if (!ok) {
+      try {
+        const r2 = await fetch(`${PYTHON_BASE}/price?from=INTEN&to=${encodeURIComponent(toSym)}&amount=${encodeURIComponent(balance)}`);
+        if (r2.ok) {
+          out = await r2.json().catch(()=>null);
+          ok = !!out;
+        }
+      } catch (e) {}
+    }
+
+    if (!ok || !out) {
+      return res.status(502).json({ error: 'python', detail: 'conversion service unavailable' });
+    }
+
+    // Normaliza salida
+    const converted = out.amount_converted ?? out.result ?? null;
+    const rate = out.rate ?? (converted ? (converted / balance) : null);
+
+    return res.json({
+      ok: true,
+      address: fromAddress,
+      from: 'INTEN',
+      to: toSym,
+      amount_in: balance,
+      amount_converted: converted,
+      rate
+    });
+  } catch (e) {
+    console.error('/api/convert error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// === REIMPLANTAR /api/withdraw-request (UI Withdraw -> Python webhook) ===
+// Requiere: Authorization: Bearer <token>
+app.post('/api/withdraw-request_disabled', async (req, res) => {
+  try {
+    const auth = (req.headers.authorization || '').toString();
+    if (!auth.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'no_token' });
+    }
+    const token = auth.slice(7).trim();
+
+    // Cargar stores
+    if (!fs.existsSync(USERS) || !fs.existsSync(ADDRS)) {
+      return res.status(500).json({ error: 'store not ready' });
+    }
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const amap  = JSON.parse(fs.readFileSync(ADDRS, 'utf8') || '{}');
+
+    // Localizar usuario por token
+    // Notas:
+    // - En este ejemplo asumimos que guardas el token en el usuario (p.ej. users[uid].token)
+    // - Si tu login guarda el token en otro lugar, ajusta esta búsqueda.
+    let uid = null, u = null;
+    for (const [k,v] of Object.entries(users)) {
+      if (v && v.token === token) { uid = k; u = v; break; }
+    }
+    if (!uid || !u) {
+      // Fallback: si tu /api/balance funciona con token, intenta derivar el uid por email conocido del token (si lo guardas)
+      return res.status(401).json({ error: 'token_not_bound' });
+    }
+
+    const fromAddress = u.address || u.deposit_address || null;
+    if (!fromAddress) return res.status(400).json({ error: 'no_from_address' });
+
+    const { external_address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    const to = (external_address || '').toString().trim();
+    if (!to || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const bal = Number(u.balance || 0);
+    if (bal < a) return res.status(400).json({ error: 'insufficient' });
+
+    // Descuento local
+    const newBal = +(bal - a).toFixed(6);
+    u.balance = newBal;
+    users[uid] = u;
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    // Registrar transacción completa
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+    txs.push({
+      id,
+      type: 'withdraw',
+      from_address: fromAddress,
+      to_address: to,
+      from_user: uid,
+      amount: -a,
+      from_balance_after: newBal,
+      note: note || ('to ' + to),
+      created_at: now
+    });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    // Reenvío a Python
+    const PY_WEBHOOK = process.env.PYTHON_RECEIVE_URL || 'http://127.0.0.1:8083/public_receive';
+    try {
+      const resp = await fetch(PY_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ address: to, amount: a, note: note || 'from Node' })
+      });
+      const txt = await resp.text();
+      console.log('[WITHDRAW] node->py', resp.status, txt);
+      if (!resp.ok) {
+        // No revertimos el débito local, pero avisamos
+        return res.json({ ok:true, balance: newBal, forwarded:false, python_status: resp.status, python_body: txt });
+      }
+    } catch (e) {
+      console.error('[WITHDRAW] forward error:', e);
+      return res.json({ ok:true, balance: newBal, forwarded:false, python_error: String(e) });
+    }
+
+    return res.json({ ok:true, balance: newBal, forwarded:true, tx_id: id });
+  } catch (e) {
+    console.error('/api/withdraw-request error:', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// === FIX: withdraw-request (token-based) ===
+app.post('/api/withdraw-request_disabled', async (req, res) => {
+  try {
+    // Usa el mismo auth que /api/balance -> req.user poblado por middleware existente
+    const u = req.user;
+    if (!u || !u.uid) return res.status(401).json({ error: 'unauthorized' });
+
+    const { external_address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!external_address || !(a > 0)) {
+      return res.status(400).json({ error: 'params' });
+    }
+
+    // Carga store y debita
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const me = users[u.uid];
+    if (!me) return res.status(404).json({ error: 'user_not_found' });
+
+    const bal = Number(me.balance || 0);
+    if (bal < a) return res.status(400).json({ error: 'insufficient' });
+
+    const newBal = +(bal - a).toFixed(6);
+    me.balance = newBal;
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    // Log de transacción
+    let txs = [];
+    try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+    txs.push({
+      id, user_id: u.uid, type: 'withdraw_req',
+      amount: -a, balance_after: newBal,
+      note: `to ${external_address}${note ? ' - ' + note : ''}`,
+      created_at: now
+    });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    // Reenvía a Python (best effort, no bloquea la respuesta)
+    try {
+      const PY = process.env.PYTHON_RECEIVE_URL || 'http://127.0.0.1:8083/public_receive';
+      const resp = await fetch(PY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: external_address, amount: a, note: note || 'from Node' })
+      });
+      const txt = await resp.text();
+      console.log('[withdraw-request] python', resp.status, txt);
+    } catch (e) {
+      console.error('[withdraw-request] python error', e);
+    }
+
+    return res.json({ ok: true, balance: newBal });
+  } catch (e) {
+    console.error('withdraw-request fatal', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+
+// === FIX: convert (usa balance del token; no pide address/amount) ===
+// Tasas placeholder: 1 INTEN => {USD,EUR,BTC,ETH,DOGE,XLM,AMR}
+
+app.post('/api/convert', (req, res) => {
+  try {
+    const u = req.user;
+    if (!u || !u.uid) return res.status(401).json({ error: 'unauthorized' });
+
+    const { to } = req.body || {};
+    const t = (to || '').toString().trim().toUpperCase();
+
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+    const me = users[u.uid];
+    if (!me) return res.status(404).json({ error: 'user_not_found' });
+
+    const amount = Number(me.balance || 0);        // TODO: más adelante: permitir "partial" si lo piden
+    const result = +(amount * rate).toFixed(8);
+
+    return res.json({ ok: true, from: 'INTEN', to: t, amount, rate, result });
+  } catch (e) {
+    console.error('convert fatal', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// ==================== INLINE AUTH RESOLVER ====================
+function resolveUserFromAuth(req) {
+  try {
+    const h = (req.headers['authorization'] || '').toString();
+    const m = h.match(/^Bearer\s+(.+)/i);
+    if (!m) return { err: 'no_token' };
+    const token = m[1].trim();
+
+    const users = JSON.parse(fs.readFileSync(USERS, 'utf8') || '{}');
+
+    // 1) tokens.json -> { "<token>": "<uid>" } o { "<token>": {"uid":"..."} }
+    try {
+      const TOKS = path.join(__dirname, 'data', 'tokens.json');
+      if (fs.existsSync(TOKS)) {
+        const map = JSON.parse(fs.readFileSync(TOKS, 'utf8') || '{}');
+        const entry = map[token];
+        const uid = (entry && entry.uid) ? entry.uid : (typeof entry === 'string' ? entry : null);
+        if (uid && users[uid]) return { uid, user: users[uid], users };
+      }
+    } catch {}
+
+    // 2) sessions.json -> mismo criterio
+    try {
+      const SESS = path.join(__dirname, 'data', 'sessions.json');
+      if (fs.existsSync(SESS)) {
+        const map = JSON.parse(fs.readFileSync(SESS, 'utf8') || '{}');
+        const entry = map[token];
+        const uid = (entry && entry.uid) ? entry.uid : (typeof entry === 'string' ? entry : null);
+        if (uid && users[uid]) return { uid, user: users[uid], users };
+      }
+    } catch {}
+
+    return { err: 'token_not_bound' };
+  } catch (e) {
+    return { err: 'auth_error', detail: String(e) };
+  }
+}
+
+// ==================== CONVERT (usa balance del token) ====================
+
+app.post('/api/convert', (req, res) => {
+  try {
+    const auth = resolveUserFromAuth(req);
+    if (auth.err) return res.status(401).json({ error: auth.err });
+
+    const { to } = req.body || {};
+    const t = (to || '').toString().trim().toUpperCase();
+
+    const amount = Number(auth.user.balance || 0);
+    const result = +(amount * rate).toFixed(8);
+
+    return res.json({ ok: true, from: 'INTEN', to: t, amount, rate, result });
+  } catch (e) {
+    console.error('convert fatal', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
+
+// ==================== WITHDRAW-REQUEST (token-based + webhook Python) ====================
+app.post('/api/withdraw-request', async (req, res) => {
+  try {
+    const auth = resolveUserFromAuth(req);
+    if (auth.err) return res.status(401).json({ error: auth.err });
+
+    const { external_address, amount, note } = req.body || {};
+    const a = Number(amount || 0);
+    if (!external_address || !(a > 0)) return res.status(400).json({ error: 'params' });
+
+    const u = auth.user, users = auth.users;
+    const bal = Number(u.balance || 0);
+    if (bal < a) return res.status(400).json({ error: 'insufficient' });
+
+    const newBal = +(bal - a).toFixed(6);
+    u.balance = newBal;
+    fs.writeFileSync(USERS, JSON.stringify(users, null, 2));
+
+    let txs = []; try { if (fs.existsSync(TXS)) txs = JSON.parse(fs.readFileSync(TXS, 'utf8') || '[]'); } catch {}
+    const id = randomUUID(), now = Date.now();
+    txs.push({
+      id, user_id: auth.uid, type: 'withdraw_req',
+      amount: -a, balance_after: newBal,
+      note: `to ${external_address}${note ? ' - ' + note : ''}`,
+      created_at: now
+    });
+    fs.writeFileSync(TXS, JSON.stringify(txs, null, 2));
+
+    // Webhook al Python (best effort)
+    try {
+      const PY = process.env.PYTHON_RECEIVE_URL || 'http://127.0.0.1:8083/public_receive';
+      const resp = await fetch(PY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: external_address, amount: a, note: note || 'from Node' })
+      });
+      const txt = await resp.text();
+      console.log('[withdraw-request inlineAuth] python', resp.status, txt);
+    } catch (e) {
+      console.error('[withdraw-request inlineAuth] python error', e);
+    }
+
+    return res.json({ ok: true, balance: newBal });
+  } catch (e) {
+    console.error('withdraw-request fatal', e);
+    return res.status(500).json({ error: 'server', detail: String(e) });
+  }
+});
