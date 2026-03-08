@@ -1,0 +1,10 @@
+{
+  "name": "Dukedom Grand Dollar",
+  "symbol": "DGD",
+  "id": "0x9b4b663Fae1d9BBC930897187F1E551632b816E1",
+  "decimals": 18,
+  "description": "Official currency of the IUKAC Royal House.",
+  "website": "https://iukac.org",
+  "status": "active",
+  "type": "ERC20"
+}
